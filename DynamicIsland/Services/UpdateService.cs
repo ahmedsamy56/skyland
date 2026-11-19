@@ -137,6 +137,11 @@ public sealed class UpdateService
             Set(UpdateStatus.Available, $"Version {Format(latest)} is available.");
             return true;
         }
+        catch (HttpRequestException ex) when (ex.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.TooManyRequests)
+        {
+            // GitHub allows only 60 anonymous requests per hour per IP address; shared networks can use them all up.
+            return Fail("GitHub is limiting update checks from this network. Try again in a few minutes.");
+        }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             // Offline or GitHub unreachable: not an error worth interrupting anyone for.
