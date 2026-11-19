@@ -29,6 +29,25 @@ public partial class SettingsWindow : Window
         Closed += (_, _) => App.Updates.Changed -= OnUpdatesChanged;
         HoverOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Hover;
         ClickOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Click;
+        PerfOffOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Off;
+        PerfRingsOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Rings;
+        PerfCpuOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Cpu;
+        LoadAlertToggle.IsChecked = settings.ShowLoadAlerts;
+    }
+
+    private void PerfOption_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsService.Current.PerfBubble =
+            PerfRingsOption.IsChecked == true ? PerfBubbleMode.Rings
+            : PerfCpuOption.IsChecked == true ? PerfBubbleMode.Cpu
+            : PerfBubbleMode.Off;
+        SettingsService.Save();
+    }
+
+    private void LoadAlertToggle_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsService.Current.ShowLoadAlerts = LoadAlertToggle.IsChecked == true;
+        SettingsService.Save();
     }
 
     private void Window_SourceInitialized(object? sender, EventArgs e) =>

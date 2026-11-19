@@ -113,6 +113,45 @@
                                       Style="{StaticResource ToggleSwitch}" Click="AutoPopToggle_Click"
                                       AutomationProperties.Name="Pop up on track change" />
                     </Grid>
+
+                    <Border Height="1" Background="#2A2A31" />
+
+                    <Grid Margin="16,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Performance ring" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="A small ring bubble on the left of the island. Rings shows CPU, memory, GPU and battery as four concentric rings; CPU shows one ring with the percentage." Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Background="#26262C" CornerRadius="10" Padding="3" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="PerfOffOption" GroupName="Perf" Content="Off"
+                                             Style="{StaticResource SegmentButton}" Click="PerfOption_Click" />
+                                <RadioButton x:Name="PerfRingsOption" GroupName="Perf" Content="Rings"
+                                             Style="{StaticResource SegmentButton}" Click="PerfOption_Click" />
+                                <RadioButton x:Name="PerfCpuOption" GroupName="Perf" Content="CPU"
+                                             Style="{StaticResource SegmentButton}" Click="PerfOption_Click" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Height="1" Background="#2A2A31" />
+
+                    <Grid Margin="16,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Heavy load and low battery alerts" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="Show a short line under the island when the CPU, memory or GPU stays above 85%, or the battery drops below 20%. Each alert shows once, then stays quiet for 2 minutes." Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <ToggleButton x:Name="LoadAlertToggle" Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}" Click="LoadAlertToggle_Click"
+                                      AutomationProperties.Name="Heavy load and low battery alerts" />
+                    </Grid>
                 </StackPanel>
             </Border>
 

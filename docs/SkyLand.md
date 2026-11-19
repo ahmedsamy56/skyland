@@ -5,6 +5,13 @@ SkyLand, by SkyZack: a Windows 11 "dynamic island", a black pill pinned to the t
 ## License
 Apache License 2.0 (`LICENSE`, verbatim from the official text) with a short `NOTICE` file ("Copyright 2026 C B Sajan (https://github.com/cbsajan)", published under the SkyZack name). The license covers the source code only; the SkyLand and SkyZack names, logos and the app icon are not licensed for use in forks (stated in the README).
 
+## Start-up animation
+Each time SkyLand starts, the island plays a short intro (about 4 seconds in total): a 12 px dot at the top springs open into the standard 270 x 60 pill, the SkyLand logo (the actual artwork from `skyland-dark.svg`, drawn as WPF paths in `MainWindow.xaml`) pops in with a small overshoot, then "SkyLand" rises in letter by letter, holds, and the pill shrinks into whatever the island normally shows.
+- The intro owns the island while it plays; alerts and prompts wait their turn.
+- It always plays (there is no setting for it). When Windows animations are off (`SystemParameters.ClientAreaAnimation`) the island goes straight to the standard pill and shows the finished logo and name for 3 s, with no spring, pop or rising letters.
+- Code: `MainWindow.Intro.cs` (`PrepareIntro`, `StartIntroAsync`, `PlayIntro`); the state is `IslandState.Intro`.
+- It plays on every start, including start with Windows. If that gets tiresome, turn the switch off.
+
 ## Branding
 - Name: **SkyLand**. Exe: `SkyLand.exe` (`<AssemblyName>` in `DynamicIsland.csproj`). Window, tray and Settings titles say SkyLand; the Settings footer reads "SkyLand 1.0.0 · by SkyZack".
 - Icon: `DynamicIsland/Assets/skyland.ico` (16, 24, 32, 48, 64, 128, 256 px), built from the artwork in `skyland-dark.svg` (blue S, white peak) on a `#000000` rounded tile; the 16 to 32 px sizes use larger artwork so they stay readable. Source with the background: `Assets/skyland-icon.svg`. It is used as the exe icon (`ApplicationIcon`), the tray icon and the Settings window icon (embedded as a WPF `Resource`).
@@ -16,33 +23,48 @@ Apache License 2.0 (`LICENSE`, verbatim from the official text) with a short `NO
 - Windows media session API (`Windows.Media.Control`, SMTC), so it works with Spotify, browsers and any player that appears in the Windows volume flyout
 - Project: `DynamicIsland/DynamicIsland.csproj`, in the `NEXUS.slnx` solution next to the unused WinUI 3 `NEXUS` template project
 
-## Behaviour (MVP)
-| State | When | Size (px) |
-|-------|------|-----------|
-| Idle | no media session | 200 x 46: live PC stats, percentage on top and icon below (below) |
-| Compact | media present | 230 x 36: artwork, title, equaliser (animates while playing) |
-| Expanded | mouse hovers the pill (or click, per settings; or track-change pop-up) | 400 x 132: artwork, title, artist, previous / play-pause / next, progress bar |
+## Behaviour: capsule, bubble, card
+The island works like the iOS Dynamic Island: **one main thing at a time, plus a small round bubble**.
 
-- Spring animation on expand, ease-in-out on collapse; collapse is delayed 250 ms after the mouse leaves.
+```
+ [performance bubble]  [ main capsule / card ]  [ activity bubble ]
+                         [ alert strip ]
+```
+
+| State | When | Size (DIPs) |
+|-------|------|-------------|
+| Idle | nothing is on | **232 x 32**: one row of icon + percentage for CPU, memory, GPU and battery |
+| Capsule | music, a Focus session or Claude is on | **44 high**, 240-276 wide (Claude 252, 262 for several sessions, 276 when it needs you; Focus 240; music 252): leading mark, label, trailing value |
+| Card | hover the capsule or the bubble (or click, per settings; or a track-change pop-up) | **340 wide**, height by content (Claude 18+28+8+46 per session, music 164, Focus 106, plus 44 for the PC row; System card 150), corner radius 38 |
+| Pop-ups | charging / unplugged, Claude needs you or is done, update prompt, start-up intro | **270 x 60** |
+
+- **Priority:** Claude (a working or waiting session) > Focus > music. The first is the **main capsule**, the second is the **bubble** on its right. A third one only shows inside the card. An open but idle Claude session only counts when nothing else is on.
+- **Hover the capsule** = its card. **Hover the bubble** = that activity's card (for example the music player with previous / play / next while Claude runs), and the capsule's activity shrinks into the bubble. Hovering the shrunken bubble swaps back. The PC row (CPU, RAM, GPU, battery) shows only on the main card, not on the bubble's card. Hovering the idle island opens the **System card** with four ring gauges.
+- **Capsules:** Claude = status ring around the Claude symbol (spinning violet arc = working, breathing amber ring = needs you), project name, timer (or the tool name when it needs permission); several sessions = a stack of avatars, "N sessions", "N needs you" / "all working". Focus = ring with the minutes, "Focus / session 1 of 3", countdown. Music = artwork, title and artist, equaliser.
+- **Bubble:** Claude symbol in its status ring with a count badge when there are several sessions; music artwork inside a progress ring; Focus ring with the minutes.
+- **Performance bubble (left, optional, off by default):** Settings > Island > Performance ring. *Rings* = four concentric rings (CPU outside, then memory, GPU, battery); *CPU* = one ring with the percentage. A ring turns red at 85% (battery below 20% while unplugged). It shows only while a capsule is on.
+- **Alert strip:** a short line under the capsule: "High CPU / Memory / GPU load 92%" with all three readings, or "Battery low 14% / Plug in the charger". Triggers when CPU, memory or GPU stays at 85% or more for two readings in a row (so a spike never alerts), or the battery is below 20% and unplugged. Each kind shows for 5 s, then stays quiet for 2 minutes. Toggle: Settings > Island > Heavy load and low battery alerts. Sampling runs every 5 s in the background (2 s while the numbers are visible). Test seam: environment variable `SKYLAND_HOT_LEVEL` replaces the 85% threshold.
+- Code: `MainWindow.xaml.cs` (`ApplyState`, `SizeOf`, bubbles), `MainWindow.Stats.cs` (stats, gauges, perf bubble, alerts). The GPU reading tolerates up to four empty samples in a row before it hides, because the Windows counter sometimes returns nothing for a sample.
+- Looping animations (status rings, equaliser) run only while their view is on screen, at 20-30 fps, because the see-through window is repainted in software.
+
+- Spring animation on expand, ease-in-out on collapse; collapse starts 250 ms after the mouse leaves (`CollapseDelay`) and is animated: the card content fades out, the pill shrinks over about half a second, the capsule content fades in as it finishes, and the bubbles shrink away.
 - **Moving the island:** press and hold anywhere on the pill (not on a button or dot) and drag it where you like, for example below a browser's tab strip. The position is saved and restored at the next start (`IslandLeft` / `IslandTop` in the settings file, in DIPs). It snaps to the default top-centre spot when within about 14 DIPs, and is clamped so the window always stays on the visible desktop (also re-clamped when the resolution or monitors change). Reset with Settings > Position > Reset position or the tray menu. A press that moves less than 5 DIPs is a click, not a drag (code: `MainWindow.Position.cs`).
 - Starts on the primary monitor, top centre. Pure black pill.
 - The window is non-activating (never takes focus), hidden from the taskbar and Alt+Tab, and always on top.
-- The window is sized for the expanded pill; the area around the pill is fully transparent, so clicks pass through to apps underneath.
+- The window is 480 x 310 DIPs, sized for the biggest card plus the bubbles; the area around the island is fully transparent, so clicks pass through to apps underneath.
 
 ## Coding agent status (Claude Code)
 The island shows your Claude Code sessions: what each is doing, how long the current turn has run, and when one needs you. Read-only: you still answer in the terminal.
 
-**Idle sessions stay visible:** while a Claude Code session is open but not working, the pill shows it with a gray dot, the project name and "idle" instead of the PC stats (media and Focus still take priority over an idle session). The PC stats return when no session is open.
+**Idle sessions stay visible:** while a Claude Code session is open but not working, the capsule shows it with an empty ring, the project name and "idle" (media and Focus still take priority over an idle session). The idle island with PC stats returns when no session is open.
 
 **Session name:** the project folder (`CLAUDE_PROJECT_DIR`), not the hook's `cwd`, because `cwd` changes with every `cd` the agent runs.
 
-**Collapsed pill (260 x 36)** while any session works: one status dot (violet = working, amber = needs you), project name, elapsed time, and a count badge when more than one is active. With several working sessions the pill slides vertically to the next every 3 s; small dots show which. The agent takes the pill over media and Focus while it works.
+**Capsule and bubble:** see "Behaviour" above. With one active session the capsule shows its project, a timer, and "needs your permission" plus the tool name when it waits. With several, it shows the avatars, "N sessions" and who needs you. The headline session is the one that needs you, otherwise the one that has worked longest. The Claude symbol is the official one (`ClaudeSymbol` geometry in `App.xaml`, from Wikimedia Commons "Claude AI symbol.svg"); it is Anthropic's trademark, so keep it out of public marketing material.
 
-**Card (290 px wide)**, shown on hover on the Agents page: one session at a time (ring avatar with the project's first letter, project, current action, duration), sliding between sessions every 3 s with a row of clickable dots underneath. Ring: spinning arc = working, breathing full ring = needs you, empty = idle. Idle-only sessions still show in the card. A session that needs you is pinned: only waiting sessions are shown until you answer.
+**Card (340 wide):** every session in one list (up to 5; waiting first, then working, then idle): ring avatar with the project's first letter, project, current action, duration, and a count chip. Ring: spinning arc = working, breathing full ring = needs you, empty = idle.
 
-**Pop-ups (300 x 40, 3 s):** amber "<project> needs you / Permission: Bash"; green "Done · 02:14 / <project>" when a turn that lasted 5 s or more finishes.
-
-**When more than one thing is active** (agents, media, Focus) the card has page dots at the top; clicking one picks the page until the card collapses.
+**Pop-ups (standard 270 x 60, two lines, 3 s):** amber "<project> needs you / Permission: Bash"; green "Done · 02:14 / <project>" when a turn that lasted 5 s or more finishes.
 
 ### How it connects
 ```
@@ -65,9 +87,10 @@ Claude Code hook event --> island-hook.exe --> named pipe "DynamicIsland.Agent" 
 ## Microsoft Clock sync (Focus sessions and timers)
 The island mirrors the Windows Clock app, read-only: you start, pause and stop sessions in Clock, the island shows them.
 
-- **Compact (no media playing):** 250 x 36 pill with a progress ring, countdown, title and session dots (filled = done, outlined = current). Orange = focus, green = break, blue = timer.
-- **Expanded:** a compact 310 x 116 Focus page (the media card stays 400 x 132; the island resizes when you switch pages) with a large glowing progress ring holding the countdown, a colored phase chip (FOCUS / BREAK / TIMER), the title ("Session 1 of 3", or the timer name), a subtitle ("Up next: 5 min break", "Ends at 10:44 AM", or "Paused in Clock"), and wide session bars (solid = done, dimmed = current). Amber subtitle text means the values are frozen (Clock minimized or on another page). When media is also playing, two page dots at the top of the card switch between Media and Focus.
-- **Media wins the compact pill** when both are active; the Focus page is one click away in the expanded card.
+- **Capsule:** progress ring with the minutes left, "Focus" (or "Break", the timer name) with "session 1 of 3" under it, and the countdown on the right. Orange = focus, green = break, blue = timer.
+- **Bubble:** the ring with the minutes left, when Claude is the main capsule.
+- **Card:** a large glowing progress ring holding the countdown, a colored phase chip (FOCUS / BREAK / TIMER), the title ("Session 1 of 3", or the timer name), a subtitle ("Up next: 5 min break", "Ends at 10:44 AM", or "Paused in Clock"), and wide session bars (solid = done, dimmed = current). Amber subtitle text means the values are frozen (Clock minimized or on another page).
+- Focus ranks below Claude and above music (see Behaviour).
 - Toggle: Settings > Integrations > Sync Microsoft Clock (on by default). Off = Clock is never touched.
 
 **How it works and its limits.** Clock has no public API, so `Services/ClockSyncService.cs` reads Clock's on-screen text through UI Automation once a second on a background thread. Verified by probing:
@@ -81,7 +104,7 @@ The island mirrors the Windows Clock app, read-only: you start, pause and stop s
 - Not implemented: controlling Clock from the island, and a phase-end pop-up.
 
 ## Power pop-up
-When the charger is connected the island flashes a 230 x 40 pill for 3 s: green bolt, green "Charging", and the battery percentage. Unplugging shows a neutral "Unplugged" with a battery outline and the percentage. Afterwards the island returns to whatever it was showing (stats or media).
+When the charger is connected the island flashes a standard 270 x 60 pill for 3 s: green bolt, green "Charging", and the battery percentage. Unplugging shows a neutral "Unplugged" with a battery outline and the percentage. Afterwards the island returns to whatever it was showing (stats or media).
 
 - Driven by `SystemEvents.PowerModeChanged` (`StatusChange`), so there is no polling. The handler compares against the last known AC state, so battery-level changes do not trigger it.
 - Takes priority over every other state, including expanded.
@@ -89,8 +112,8 @@ When the charger is connected the island flashes a 230 x 40 pill for 3 s: green 
 - Fixed 3 s duration and always on: there is no Settings option yet.
 - State machine: `IslandState.Notice`; `ShowPowerNotice()` in `MainWindow.xaml.cs`. Some laptops report the change a second or two after plugging in.
 
-## PC stats (idle pill)
-When no media is playing the pill shows a small icon and a percentage for CPU, memory, GPU and battery, refreshed every 2 s. Icons are 12x12 vector `Path`s in `MainWindow.xaml` (no icon font); hover an icon for its name.
+## PC stats
+Shown in three places: the **idle island** (a row of icon + percentage for CPU, memory, GPU and battery), the **bottom row of the main card**, and the **System card** (ring gauges, opens when you hover the idle island). The optional performance bubble and the alert strip use the same readings. Icons are 12x12 vector `Path`s in `MainWindow.xaml` (no icon font); hover an icon for its name.
 
 | Item | Source | Notes |
 |------|--------|-------|
@@ -99,8 +122,8 @@ When no media is playing the pill shows a small icon and a percentage for CPU, m
 | GPU | "GPU Engine" performance counters | busiest engine (like Task Manager); hidden if Windows exposes no counters. Works for NVIDIA, AMD and Intel, no vendor tools |
 | Battery | `GetSystemPowerStatus` | hidden on PCs without a battery; a bolt appears on the icon when plugged in |
 
-- A value turns red at 85% or more (battery at 20% or less while unplugged).
-- Sampling runs only while the idle pill is visible, so it costs nothing while media is playing. The first reading appears about 0.6 s after the pill shows, because CPU and GPU are deltas.
+- A value turns red at 85% or more (battery below 20% while unplugged).
+- Sampling runs all the time so the alerts can work: every 2 s while the numbers are on screen (idle island, a card, the performance bubble) and every 5 s otherwise. The first reading appears about 0.6 s after start, because CPU and GPU are deltas.
 - Temperature is not included: CPU temperature needs LibreHardwareMonitor and usually administrator rights. Deferred on purpose.
 - Requires the `System.Diagnostics.PerformanceCounter` NuGet package (for the GPU counters only).
 
@@ -113,6 +136,8 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | General | Position: Reset position | top centre | Forgets the dragged position (also in the tray menu) |
 | Island | Expand when you: Hover / Click | Hover | Hover expands on mouse enter; Click expands on click of the compact pill. Both collapse 250 ms after the mouse leaves |
 | Island | Pop up on track change | off | Expands for 3 s when the track changes (not on app start, pause or resume) |
+| Island | Performance ring: Off / Rings / CPU | Off | Ring-gauge bubble on the left of the island |
+| Island | Heavy load and low battery alerts | on | Alert strip under the capsule (5 s, then silent for 2 minutes) |
 | Integrations | Sync Microsoft Clock | on | Mirrors Clock's Focus sessions and timers (see above) |
 | Integrations | Claude Code status | on | Shows Claude Code sessions (needs the hooks) |
 | Integrations | Claude Code hooks: Connect / Disconnect | not connected | Adds or removes the island's hooks in `~/.claude/settings.json` |
@@ -127,11 +152,13 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | `App.xaml(.cs)` | Startup, single-instance mutex, tray lifetime, shared `IconButton` style |
 | `Services/TrayService.cs` | Tray icon (drawn in code, WinForms `NotifyIcon`): double-click or "Settings..." opens Settings, "Exit" quits |
 | `Services/StartupService.cs` | Autostart via `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (no admin needed). The registry is the source of truth, not the settings file |
-| `MainWindow.Agent.cs` | Coding agent UI: collapsed pill, one-at-a-time card, avatars, slide animation, pop-ups |
+| `MainWindow.Agent.cs` | Coding agent UI: Claude capsule, bubble, session list card, status rings and avatars, pop-ups |
+| `MainWindow.Stats.cs` | PC stats sampling, System card gauges, performance bubble, heavy-load and battery alerts |
 | `Services/AgentService.cs` | Named-pipe server and Claude Code session state machine |
 | `Services/ClaudeHookInstaller.cs` | Connect / Disconnect: merges the hooks into `~/.claude/settings.json` |
 | `../DynamicIsland.Hook/` | `island-hook.exe`, the tiny program Claude Code runs on each hook event |
 | `Services/UpdateService.cs` | GitHub release check, SHA-256 verified download, runs the MSI |
+| `MainWindow.Intro.cs` | The start-up logo animation |
 | `MainWindow.Position.cs` | Drag to move, snap to the default spot, clamp to the screen, restore on start |
 | `MainWindow.Update.cs` | The update prompt and progress in the island, and the check schedule |
 | `../Installer/Package.wxs`, `build-installer.ps1` | WiX package definition and the script that builds the MSI and its checksum |
@@ -139,7 +166,7 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | `Services/SystemStatsService.cs` | CPU / RAM / GPU / battery sampling for the idle pill |
 | `Services/SettingsService.cs` | `AppSettings` stored as JSON in `%AppData%\DynamicIsland\settings.json`; `SettingsService.Current` is read live by the island |
 | `SettingsWindow.xaml(.cs)` | Dark single-page settings window with sections. Toggle and segmented-button styles live in `App.xaml` |
-| `MainWindow.xaml(.cs)` | Pill UI, state machine (Idle / Compact / Expanded), animations, hover and button handling |
+| `MainWindow.xaml(.cs)` | Island UI, state machine (Idle / Capsule / Card / Notice / Update / Intro), priority of activities, bubbles, animations, hover and button handling |
 | `Services/MediaService.cs` | Wraps SMTC: snapshot (title, artist, artwork, play state), timeline, play/pause/next/previous |
 | `Native/NativeMethods.cs` | `WS_EX_TOOLWINDOW` and `WS_EX_NOACTIVATE` window styles |
 | `app.manifest` | Per-monitor DPI awareness |
@@ -171,7 +198,7 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 
 ### How the in-app updater works (`Services/UpdateService.cs`, `MainWindow.Update.cs`)
 - Checks the latest release of `cbsajan/skyland` through the GitHub API: 20 s after the app starts, then every 6 h but at most about once a day. Turn off in Settings > Updates > Check for updates automatically; the **Check for updates** button always works.
-- A newer version shows a prompt in the island: **"SkyLand 1.1.0 is available" [Install] [Later]**. Later hides it for 24 h. Install shows download progress in the island, then runs the MSI (`msiexec /i ... /passive`, no admin prompt), which closes the app, replaces the files and starts the new version.
+- A newer version shows a prompt in the island: **"Update 1.1.0 ready" [Install] [Later]**. Later hides it for 24 h. Install shows download progress in the island, then runs the MSI (`msiexec /i ... /passive`, no admin prompt), which closes the app, replaces the files and starts the new version.
 - **Verification:** the installer is downloaded over HTTPS from GitHub hosts only, and run only if its SHA-256 equals the hash in the release's `.msi.sha256` file; a mismatch deletes the download and installs nothing. While releases are **unsigned** this protects against corrupted or swapped downloads but not against someone who controls the GitHub repository; a code-signing certificate would close that gap (the next step would be to make the updater check the signature too).
 - Test seam: environment variable `SKYLAND_UPDATE_URL` replaces the GitHub URL (and lifts the host allow-list) so the flow can be tested against a local server. Never set it in normal use.
 - Tested end to end on this PC: install 1.0.0 silently, detect and install 1.0.1 through the app's own Install button (about 18 s, new version running, autostart/hooks/shortcuts intact), a download with a wrong checksum refused, then uninstall (everything removed).

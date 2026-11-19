@@ -10,59 +10,49 @@ using DynamicIsland.Services;
 
 namespace DynamicIsland;
 
+// The island is a main capsule with an optional small round bubble beside it (like the iOS Dynamic Island):
+//   main capsule  = the most important thing that is on (Claude > Focus > Music), or the PC stats when idle
+//   bubble        = the second most important thing
+//   hover capsule = its card; hover the bubble = that activity's card (the main one shrinks into the bubble)
+//   alert strip   = a short line under the capsule for heavy PC load / low battery
 public partial class MainWindow : Window
 {
-    private enum IslandState { Idle, Compact, FocusCompact, AgentCompact, Expanded, Notice, Update }
-    private enum Page { Media, Focus, Agent }
+    private enum IslandState { Idle, Capsule, Card, Notice, Update, Intro }
+    private enum Kind { Claude, Focus, Music }
 
-    // Pill sizes, matching the approved design preview.
-    private static readonly (double W, double H, double R) IdleSize = (200, 46, 23);
-    private static readonly (double W, double H, double R) CompactSize = (230, 36, 18);
-    private static readonly (double W, double H, double R) FocusCompactSize = (250, 36, 18);
-    private static readonly (double W, double H, double R) ExpandedSize = (400, 132, 30);
-    private static readonly (double W, double H, double R) NoticeSize = (230, 40, 20);
+    // Sizes. The idle pill shows only the PC stats. Capsules are 44 px high; cards are 340 px wide.
+    // Pop-ups (charging, update prompt, intro) share one standard size so they never jump around.
+    private static readonly (double W, double H, double R) IdleSize = (232, 32, 16);
+    private static readonly (double W, double H, double R) StandardSize = (270, 60, 28);
+    private const double CapsuleHeight = 44, CapsuleRadius = 22;
+    private const double CardWidth = 340, CardRadius = 38;
+    private const double StatsBlock = 44;      // room under a card for the PC row
+    private const double CardBottomPad = 16;   // bottom padding of a card that has no PC row
 
-    // The Focus page is smaller than the media card: it only needs a ring and three lines of text.
-    private static readonly (double W, double H, double R) FocusExpandedSize = (310, 116, 28);
-
-    private static readonly (double W, double H, double R) AgentCompactSize = (260, 36, 18);
-    private static readonly (double W, double H, double R) AgentNoticeSize = (300, 40, 20);
-
-    private (double W, double H, double R) SizeOf(IslandState state, Page page) => state switch
+    private static double CapsuleWidth(Kind kind, double claudeWidth) => kind switch
     {
-        IslandState.Expanded => page switch
-        {
-            Page.Focus => FocusExpandedSize,
-            Page.Agent => (290d, AgentCardHeight(), 24d),
-            _ => ExpandedSize
-        },
-        IslandState.Compact => CompactSize,
-        IslandState.FocusCompact => FocusCompactSize,
-        IslandState.AgentCompact => AgentCompactSize,
-        IslandState.Notice => _noticeWide ? AgentNoticeSize : NoticeSize,
-        IslandState.Update => (340d, 44d, 22d),
-        _ => IdleSize
+        Kind.Claude => claudeWidth,
+        Kind.Focus => 240,
+        _ => 252
     };
 
     private static readonly Brush FocusOrange = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0x6A, 0x3D)));
     private static readonly Brush TimerBlue = Freeze(new SolidColorBrush(Color.FromRgb(0x0A, 0x84, 0xFF)));
     private static readonly Brush DimBrush = Freeze(new SolidColorBrush(Color.FromRgb(0x9A, 0x9A, 0xA3)));
     private static readonly Brush TrackBrush = Freeze(new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2E)));
-    private static readonly Brush PagerOff = Freeze(new SolidColorBrush(Color.FromRgb(0x46, 0x46, 0x4F)));
-
-    // Ring: path diameter is 22 - 3 (stroke), dash lengths are measured in stroke widths.
-    private const double RingDashUnits = Math.PI * (22 - 3) / 3;
-    private const double BigRingDashUnits = Math.PI * (80 - 7) / 7;
     private static readonly Brush WarnAmber = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0xB3, 0x40)));
-
     private static readonly Brush ChargingGreen = Freeze(new SolidColorBrush(Color.FromRgb(0x30, 0xD1, 0x58)));
-
+    private static readonly Brush NormalBrush = Freeze(new SolidColorBrush(Colors.White));
+    private static readonly Brush WarnBrush = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0x5F, 0x7A)));
     private static readonly Brush PlaceholderArt = Freeze(new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2E)));
-    private const string PlayGlyph = "";
-    private const string PauseGlyph = "";
+    private const string PlayGlyph = "";    // Segoe Fluent Icons: Play
+    private const string PauseGlyph = "";   // Segoe Fluent Icons: Pause
 
     private readonly MediaService _media = new();
-    private readonly DispatcherTimer _leaveTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    // How long the pointer may be outside the island before a card collapses (the collapse itself is animated).
+    private static readonly TimeSpan CollapseDelay = TimeSpan.FromMilliseconds(250);
+
+    private readonly DispatcherTimer _leaveTimer = new() { Interval = CollapseDelay };
     private readonly DispatcherTimer _progressTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private readonly DispatcherTimer _popTimer = new() { Interval = TimeSpan.FromSeconds(3) };
 
@@ -71,31 +61,24 @@ public partial class MainWindow : Window
     private bool _notice;
     private bool _lastPluggedIn = SystemStatsService.ReadBattery().PluggedIn;
 
-    // PC stats: sampled only while the idle pill is showing.
-    private readonly SystemStatsService _stats = new();
-    private readonly DispatcherTimer _statsTimer = new();
-    private bool _sampling;
-
-    private static readonly Brush NormalBrush = Freeze(new SolidColorBrush(Colors.White));
-    private static readonly Brush WarnBrush = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0x5F, 0x7A)));
-
     // Microsoft Clock mirror (Focus sessions and timers)
     private readonly ClockSyncService _clock = new();
     private ClockSnapshot? _clockSnap;
-    private Page _page = Page.Media;       // page the expanded card should show
-    private Page _shownPage = Page.Media;  // page currently faded in
-    private Page? _userPage;               // page picked with the dots; forgotten when the card collapses
-    private bool _multiPage;               // more than one page available (the dots are visible)
-    private bool _noticeWide;              // the current pop-up is the wide (coding agent) one
-    private string _pagerKey = "";
 
     private IslandState _state = IslandState.Idle;
     private (double W, double H, double R) _size = IdleSize;   // size the pill is animating to
+    private string _viewKey = "";                              // what is on screen; views are re-animated only when it changes
+    private Kind? _main, _side;                                // capsule and bubble, in priority order
+    private Kind? _cardKind;                                   // what the open card shows (null = system card)
+    private Kind? _bubbleKind;                                 // what the bubble shows right now
+    private bool _cardSwapped;                                 // the card shows the bubble's activity (no PC row)
     private MediaSnapshot? _current;
     private bool _hovering;          // expanded by the mouse (hover or click, per settings)
+    private bool _hoverSide;         // the pointer is on the bubble, so the card shows the bubble's activity
     private bool _popping;           // expanded briefly because the track changed
     private string? _lastTrackKey;
     private bool _equaliserRunning;
+    private bool _mediaPlaying;
     private int _refreshVersion;
     private double _progressRatio;
 
@@ -117,11 +100,13 @@ public partial class MainWindow : Window
         // Where the user left it, or centred on the primary monitor flush with the top edge.
         InitPosition();
         ApplyPosition();
+        PrepareIntro();
 
         _leaveTimer.Tick += (_, _) =>
         {
             _leaveTimer.Stop();
             _hovering = false;
+            _hoverSide = false;
             ApplyState();
         };
         _progressTimer.Tick += (_, _) =>
@@ -135,7 +120,6 @@ public partial class MainWindow : Window
             _popping = false;
             ApplyState();
         };
-        _statsTimer.Tick += async (_, _) => await UpdateStatsAsync();
         _noticeTimer.Tick += (_, _) =>
         {
             _noticeTimer.Stop();
@@ -146,22 +130,25 @@ public partial class MainWindow : Window
 
         _clock.Updated += (_, snapshot) => Dispatcher.InvokeAsync(() => OnClockUpdated(snapshot));
         SettingsService.Changed += ApplyClockSetting;
+        SettingsService.Changed += OnSettingsChanged;
         InitAgent();
         InitUpdates();
+        InitStats();
 
         Loaded += async (_, _) =>
         {
+            BuildGauges();
             ApplyClockSetting();
             ApplyAgentSetting();
+            StartStats();
             _ = StartUpdatesAsync();
+            _ = StartIntroAsync();
 
             _media.Changed += (_, _) => Dispatcher.InvokeAsync(RefreshAsync);
             await _media.InitializeAsync();
             await RefreshAsync();
             _progressTimer.Start();
-
-            // ApplyState only reacts to changes, so show the stats if we start idle.
-            if (_state == IslandState.Idle) SetStatsActive(true);
+            ApplyState();
         };
     }
 
@@ -169,6 +156,9 @@ public partial class MainWindow : Window
     {
         NativeMethods.MakeOverlay(new WindowInteropHelper(this).Handle);
     }
+
+    // Settings such as the performance bubble change what is on screen.
+    private void OnSettingsChanged() => ApplyState();
 
     // ----- Media refresh -------------------------------------------------
 
@@ -198,7 +188,9 @@ public partial class MainWindow : Window
             var art = snapshot.Art is null ? PlaceholderArt : Freeze(new ImageBrush(snapshot.Art) { Stretch = Stretch.UniformToFill });
             ArtSmall.Background = art;
             ArtLarge.Background = art;
+            BubbleArt.Fill = art;
             TitleSmall.Text = snapshot.Title;
+            ArtistSmall.Text = snapshot.Artist;
             TitleLarge.Text = snapshot.Title;
             ArtistLarge.Text = snapshot.Artist;
             PlayButton.Content = snapshot.IsPlaying ? PauseGlyph : PlayGlyph;
@@ -215,6 +207,23 @@ public partial class MainWindow : Window
 
     // ----- State & animation ---------------------------------------------
 
+    private double CardContentHeight(Kind? kind) => kind switch
+    {
+        Kind.Claude => 18 + 28 + 8 + ClaudeRowCount() * ClaudeRowHeight,
+        Kind.Music => 164,
+        Kind.Focus => 106,
+        _ => 0
+    };
+
+    private (double W, double H, double R) SizeOf(IslandState target, Kind? cardKind, bool statsRow) => target switch
+    {
+        IslandState.Intro or IslandState.Notice or IslandState.Update => StandardSize,
+        IslandState.Capsule when _main is Kind main => (CapsuleWidth(main, ClaudeCapsuleWidth()), CapsuleHeight, CapsuleRadius),
+        IslandState.Card when cardKind is null => (CardWidth, 150, CardRadius),
+        IslandState.Card => (CardWidth, CardContentHeight(cardKind) + (statsRow ? StatsBlock : CardBottomPad), CardRadius),
+        _ => IdleSize
+    };
+
     private void ApplyState()
     {
         bool hasMedia = _current is not null;
@@ -222,69 +231,209 @@ public partial class MainWindow : Window
         bool hasAgent = _agentSessions.Count > 0;
         bool agentActive = _agentSessions.Any(s => s.State != AgentState.Idle);
 
-        // Pages that have something to show. The expanded card shows one; the dots switch between them.
-        var pages = new List<Page>();
-        if (hasAgent) pages.Add(Page.Agent);
-        if (hasMedia) pages.Add(Page.Media);
-        if (hasClock) pages.Add(Page.Focus);
-        _multiPage = pages.Count > 1;
+        // What is on, in priority order: Claude, then Focus, then music. An open but idle Claude session
+        // only counts when nothing else is going on, so it never pushes music or Focus aside.
+        var activities = new List<Kind>();
+        if (agentActive) activities.Add(Kind.Claude);
+        if (hasClock) activities.Add(Kind.Focus);
+        if (hasMedia) activities.Add(Kind.Music);
+        if (activities.Count == 0 && hasAgent) activities.Add(Kind.Claude);
+        _main = activities.Count > 0 ? activities[0] : null;
+        _side = activities.Count > 1 ? activities[1] : null;
 
-        // A working agent owns the collapsed pill, so it also owns the card unless the user picked another page.
-        _page = _userPage is Page chosen && pages.Contains(chosen) ? chosen
-            : agentActive ? Page.Agent
-            : hasMedia ? Page.Media
-            : hasClock ? Page.Focus
-            : Page.Agent;
-        bool pageChanged = _page != _shownPage;
+        // The card shows the capsule's activity, or the bubble's when the pointer is on the bubble
+        // (or briefly the music when the track changed).
+        bool wantCard = _hovering || _popping;
+        Kind? cardKind = _main;
+        if (_popping && !_hovering && hasMedia) cardKind = Kind.Music;
+        else if (_hovering && _hoverSide && _side is not null) cardKind = _side;
+        bool swapped = _main is not null && cardKind != _main;
 
-        var target = _notice ? IslandState.Notice
+        var target = _intro ? IslandState.Intro
+            : _notice ? IslandState.Notice
             : _updatePrompt ? IslandState.Update
-            : pages.Count > 0 && (_hovering || _popping) ? IslandState.Expanded
-            : agentActive ? IslandState.AgentCompact
-            : hasMedia ? IslandState.Compact
-            : hasClock ? IslandState.FocusCompact
-            : hasAgent ? IslandState.AgentCompact   // open but idle sessions replace the PC stats
+            : wantCard ? IslandState.Card
+            : _main is not null ? IslandState.Capsule
             : IslandState.Idle;
 
-        if (target != IslandState.Expanded && target != IslandState.Notice) _userPage = null;
+        // The PC row belongs to the main card only, not to the bubble's card.
+        bool statsRow = target == IslandState.Card && !swapped && cardKind is not null;
+        var size = SizeOf(target, cardKind, statsRow);
 
-        bool stateChanged = target != _state;
-        var size = SizeOf(target, _page);
+        _bubbleKind = target switch
+        {
+            IslandState.Capsule => _side,
+            IslandState.Card when swapped => _main,
+            _ => null
+        };
+        var perf = SettingsService.Current.PerfBubble;
+        bool perfShown = perf != PerfBubbleMode.Off && target == IslandState.Capsule;
+
+        var previous = _state;
+        _state = target;
+        _cardKind = cardKind;
+        _cardSwapped = swapped;
+        _numbersVisible = target == IslandState.Idle || target == IslandState.Card;
+        _rowVisibleInCard = statsRow;
+
+        // Which Claude views are on screen (they are built only while visible, because their rings animate forever).
+        _claudeInCapsule = target == IslandState.Capsule && _main == Kind.Claude;
+        _claudeInBubble = _bubbleKind == Kind.Claude;
+        _claudeInCard = target == IslandState.Card && cardKind == Kind.Claude;
+
+        string key = $"{target}|{_main}|{_side}|{cardKind}|{swapped}|{_bubbleKind}|{perf}|{perfShown}|{statsRow}";
         bool sizeChanged = size != _size;
-        UpdatePager(target, pages);
-        if (!stateChanged && !pageChanged && !sizeChanged) return;
 
-        if (stateChanged || sizeChanged)
+        if (sizeChanged)
         {
             bool growing = size.W * size.H > _size.W * _size.H;
             _size = size;
-            _state = target;
 
             IEasingFunction ease = growing
                 ? new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.45 }
                 : new CubicEase { EasingMode = EasingMode.EaseInOut };
-            var duration = TimeSpan.FromMilliseconds(growing ? 500 : 350);
+            var duration = TimeSpan.FromMilliseconds(growing ? 500 : 520);
 
             Pill.BeginAnimation(WidthProperty, new DoubleAnimation(size.W, duration) { EasingFunction = ease });
             Pill.BeginAnimation(HeightProperty, new DoubleAnimation(size.H, duration) { EasingFunction = ease });
             BeginAnimation(PillRadiusProperty, new DoubleAnimation(size.R, duration) { EasingFunction = ease });
-
-            if (stateChanged) SetStatsActive(target == IslandState.Idle);
         }
 
-        _shownPage = _page;
-        FadeView(CompactView, target == IslandState.Compact);
-        FadeView(FocusCompactView, target == IslandState.FocusCompact);
-        FadeView(AgentCompactView, target == IslandState.AgentCompact);
-        FadeView(ExpandedView, target == IslandState.Expanded && _page == Page.Media);
-        FadeView(FocusPageView, target == IslandState.Expanded && _page == Page.Focus);
-        FadeView(AgentCardView, target == IslandState.Expanded && _page == Page.Agent);
-        FadeView(NoticeView, target == IslandState.Notice);
-        FadeView(UpdateView, target == IslandState.Update);
+        if (key != _viewKey)
+        {
+            _viewKey = key;
 
-        if (target == IslandState.Expanded) UpdateProgress();
-        if (target == IslandState.AgentCompact) UpdateAgentCompact(false);
-        if (target == IslandState.Expanded && _page == Page.Agent) UpdateAgentCard(false);
+            // Closing a card: the card content fades out first, the pill shrinks, and the capsule content
+            // fades in as the shrink finishes, so it reads as one smooth motion.
+            bool collapsing = previous == IslandState.Card && target is IslandState.Capsule or IslandState.Idle;
+            int arriveDelay = collapsing ? 300 : 120;
+
+            FadeView(ClaudeCapsule, target == IslandState.Capsule && _main == Kind.Claude, arriveDelay);
+            FadeView(FocusCompactView, target == IslandState.Capsule && _main == Kind.Focus, arriveDelay);
+            FadeView(CompactView, target == IslandState.Capsule && _main == Kind.Music, arriveDelay);
+
+            FadeView(ClaudeCard, target == IslandState.Card && cardKind == Kind.Claude);
+            FadeView(ExpandedView, target == IslandState.Card && cardKind == Kind.Music);
+            FadeView(MusicCardBg, target == IslandState.Card && cardKind == Kind.Music);
+            FadeView(FocusPageView, target == IslandState.Card && cardKind == Kind.Focus);
+            FadeView(SystemCard, target == IslandState.Card && cardKind is null);
+
+            FadeView(NoticeView, target == IslandState.Notice);
+            FadeView(UpdateView, target == IslandState.Update);
+            FadeView(IntroView, target == IslandState.Intro);
+            if (target == IslandState.Intro && previous != IslandState.Intro) PlayIntro();
+
+            // PC stats: the whole idle pill, or the bottom row of the main card.
+            FadeView(StatsView, target == IslandState.Idle || statsRow, arriveDelay);
+            FadeView(StatsDivider, statsRow);
+            StatsView.Margin = new Thickness(0, 0, 0, statsRow ? 12 : 8);
+
+            ShowBubble();
+            ShowPerfBubble(perfShown);
+            SetEqualiser(_mediaPlaying);
+            UpdateAlertStrip();
+            UpdateStatsPace();
+        }
+
+        RefreshClaude();
+        UpdateProgress();
+        UpdateBubbleContent();
+    }
+
+    // ----- Bubbles -------------------------------------------------------
+
+    private static void PopIn(ScaleTransform scale)
+    {
+        var spring = new DoubleAnimation(0.3, 1, TimeSpan.FromMilliseconds(380))
+        {
+            EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.6 }
+        };
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, spring);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, spring);
+    }
+
+    // The activity bubble to the right of the capsule: shows the second activity, or (while its card is
+    // open) the one that shrank out of the capsule.
+    private void ShowBubble()
+    {
+        bool show = _bubbleKind is not null;
+
+        // While it shrinks away it keeps its content, so it does not flash empty.
+        if (show)
+        {
+            BubbleClaudeHost.Visibility = _bubbleKind == Kind.Claude ? Visibility.Visible : Visibility.Collapsed;
+            BubbleMusic.Visibility = _bubbleKind == Kind.Music ? Visibility.Visible : Visibility.Collapsed;
+            BubbleFocus.Visibility = _bubbleKind == Kind.Focus ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        SetBubble(Bubble, BubbleScale, show);
+    }
+
+    // A bubble springs in when it appears and shrinks and fades out when it goes, instead of snapping.
+    private static void SetBubble(Border bubble, ScaleTransform scale, bool show)
+    {
+        bool visible = bubble.Visibility == Visibility.Visible && !Equals(bubble.Tag, "hiding");
+
+        if (show)
+        {
+            bubble.Tag = null;
+            bubble.BeginAnimation(OpacityProperty, null);
+            bubble.Opacity = 1;
+            if (!visible)
+            {
+                bubble.Visibility = Visibility.Visible;
+                PopIn(scale);
+            }
+            return;
+        }
+
+        if (!visible) return;   // already hidden, or already on its way out
+
+        bubble.Tag = "hiding";
+        var duration = TimeSpan.FromMilliseconds(260);
+        var shrink = new DoubleAnimation(1, 0.3, duration) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+        var fade = new DoubleAnimation(1, 0, duration);
+        fade.Completed += (_, _) =>
+        {
+            if (!Equals(bubble.Tag, "hiding")) return;   // it came back in the meantime
+
+            bubble.Tag = null;
+            bubble.Visibility = Visibility.Collapsed;
+            bubble.BeginAnimation(OpacityProperty, null);
+            bubble.Opacity = 1;
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            scale.ScaleX = scale.ScaleY = 1;
+        };
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, shrink);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, shrink);
+        bubble.BeginAnimation(OpacityProperty, fade);
+    }
+
+    private void UpdateBubbleContent()
+    {
+        if (_bubbleKind == Kind.Focus) UpdateFocusBubble();
+    }
+
+    private void Bubble_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        _leaveTimer.Stop();
+        if (SettingsService.Current.ExpandTrigger != ExpandTrigger.Hover) return;
+
+        // Entering the bubble opens its activity; while a card is open, the shrunken one swaps back.
+        _hoverSide = _hovering ? !_hoverSide : true;
+        _hovering = true;
+        ApplyState();
+    }
+
+    private void Bubble_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (SettingsService.Current.ExpandTrigger != ExpandTrigger.Click) return;
+
+        _leaveTimer.Stop();
+        _hoverSide = _hovering ? !_hoverSide : true;
+        _hovering = true;
+        ApplyState();
     }
 
     // ----- Microsoft Clock (Focus sessions and timers) -------------------
@@ -316,6 +465,10 @@ public partial class MainWindow : Window
         ApplyState();
     }
 
+    // Ring dash for a circle of the given outer size: dash lengths are measured in stroke widths.
+    private static DoubleCollection Dash(double size, double thickness, double ratio) =>
+        new() { Math.Clamp(ratio, 0, 1) * Math.PI * (size - thickness) / thickness, 100 };
+
     private void UpdateClockUi()
     {
         if (_clockSnap is not { } snap) return;
@@ -325,25 +478,36 @@ public partial class MainWindow : Window
         Brush accent = s.Kind == ClockKind.Timer ? TimerBlue : s.IsBreak ? ChargingGreen : FocusOrange;
         double ratio = s.Total > TimeSpan.Zero ? Math.Clamp(1 - s.Remaining / s.Total, 0, 1) : 0;
         string countdown = FormatClock(s.Remaining);
+        var ringBrush = live ? accent : DimBrush;
+        string minutes = Math.Max(0, (int)Math.Ceiling(s.Remaining.TotalMinutes)).ToString();
 
-        // Compact pill
+        // Capsule
         FocusCountdownSmall.Text = countdown;
-        FocusCountdownSmall.Foreground = live ? NormalBrush : DimBrush;
-        FocusRing.Stroke = live ? accent : DimBrush;
-        FocusRing.StrokeDashArray = new DoubleCollection { ratio * RingDashUnits, 100 };
+        FocusCountdownSmall.Foreground = live ? accent : DimBrush;
+        FocusRing.Stroke = ringBrush;
+        FocusRing.StrokeDashArray = Dash(28, 3, ratio);
+        FocusRingMinutes.Text = minutes;
         FocusTitleSmall.Text = snap.Link switch
         {
             ClockLink.Minimized => "Clock minimized",
             ClockLink.PageHidden => "Open Focus in Clock",
             _ => s.Kind == ClockKind.Timer ? s.Label : s.IsBreak ? "Break" : "Focus"
         };
-        BuildDots(FocusDotsSmall, s, accent, 6);
+        FocusSubSmall.Text = s.Kind == ClockKind.Focus && s.Index is int idx && s.Count is int cnt
+            ? $"session {idx} of {cnt}"
+            : s.Kind == ClockKind.Timer ? "timer" : "";
+        FocusSubSmall.Visibility = FocusSubSmall.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        // Expanded page: ring + chip + title + subtitle + session segments
-        var ringColor = live ? accent : DimBrush;
-        FocusBigRing.Stroke = ringColor;
-        FocusBigRing.StrokeDashArray = new DoubleCollection { Math.Max(ratio, 0.002) * BigRingDashUnits, 100 };
-        FocusGlow.Color = ((SolidColorBrush)ringColor).Color;
+        // Bubble
+        _focusBubbleRatio = ratio;
+        _focusBubbleMinutes = minutes;
+        _focusBubbleBrush = ringBrush;
+        UpdateFocusBubble();
+
+        // Card: ring + chip + title + subtitle + session segments
+        FocusBigRing.Stroke = ringBrush;
+        FocusBigRing.StrokeDashArray = Dash(80, 7, Math.Max(ratio, 0.002));
+        FocusGlow.Color = ((SolidColorBrush)ringBrush).Color;
         FocusGlow.Opacity = live ? 0.45 : 0;
 
         FocusCountdown.Text = countdown;
@@ -371,6 +535,17 @@ public partial class MainWindow : Window
         BuildSegments(FocusDots, s, accent);
     }
 
+    private double _focusBubbleRatio;
+    private string _focusBubbleMinutes = "";
+    private Brush _focusBubbleBrush = FocusOrange;
+
+    private void UpdateFocusBubble()
+    {
+        BubbleFocusRing.Stroke = _focusBubbleBrush;
+        BubbleFocusRing.StrokeDashArray = Dash(38, 4, _focusBubbleRatio);
+        BubbleFocusText.Text = _focusBubbleMinutes;
+    }
+
     // Wide bars instead of dots: solid = finished, dimmed accent = current, dark = still to come.
     private static void BuildSegments(Panel panel, ClockSession s, Brush accent)
     {
@@ -395,99 +570,41 @@ public partial class MainWindow : Window
         }
     }
 
-    // Filled = finished sessions, outlined = the current one, dim = still to come.
-    private static void BuildDots(Panel panel, ClockSession s, Brush accent, double size)
-    {
-        panel.Children.Clear();
-        if (s.Kind != ClockKind.Focus || s.Count is not int count || s.Index is not int index) return;
-        if (count < 1 || count > 12) return;
-
-        int done = s.IsBreak ? index : index - 1;
-        for (int i = 0; i < count; i++)
-        {
-            var dot = new System.Windows.Shapes.Ellipse
-            {
-                Width = size,
-                Height = size,
-                Margin = new Thickness(i == 0 ? 0 : 4, 0, 0, 0)
-            };
-
-            if (i < done) dot.Fill = accent;
-            else if (i == done && !s.IsBreak) { dot.Stroke = accent; dot.StrokeThickness = 1.5; }
-            else dot.Fill = TrackBrush;
-
-            panel.Children.Add(dot);
-        }
-    }
-
     private static string FormatClock(TimeSpan t) =>
         t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes:00}:{t.Seconds:00}";
 
-    // One dot per page that has content (agents, media, focus), shown only in the expanded card.
-    private void UpdatePager(IslandState target, List<Page> pages)
-    {
-        bool show = pages.Count > 1 && target == IslandState.Expanded;
-        Pager.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        if (!show) return;
-
-        // Rebuild only when something changed, so a click is never lost to a re-created element.
-        string key = string.Join(",", pages) + "|" + _page;
-        if (key == _pagerKey) return;
-        _pagerKey = key;
-
-        Pager.Children.Clear();
-        foreach (var page in pages)
-        {
-            var hit = new Border
-            {
-                Padding = new Thickness(5, 3, 5, 3),
-                Background = Brushes.Transparent,
-                Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = page.ToString(),
-                Child = new System.Windows.Shapes.Ellipse
-                {
-                    Width = 6,
-                    Height = 6,
-                    Fill = page == _page ? NormalBrush : PagerOff
-                }
-            };
-            hit.MouseLeftButtonUp += (_, e) =>
-            {
-                _userPage = page;
-                ApplyState();
-                e.Handled = true;
-            };
-            Pager.Children.Add(hit);
-        }
-    }
-
-    private static void FadeView(UIElement view, bool show)
+    private static void FadeView(UIElement view, bool show, int showDelayMs = 120)
     {
         view.IsHitTestVisible = show;
-        var fade = new DoubleAnimation(show ? 1 : 0, TimeSpan.FromMilliseconds(show ? 220 : 100))
+        var fade = new DoubleAnimation(show ? 1 : 0, TimeSpan.FromMilliseconds(show ? 240 : 140))
         {
-            BeginTime = show ? TimeSpan.FromMilliseconds(120) : TimeSpan.Zero
+            BeginTime = show ? TimeSpan.FromMilliseconds(showDelayMs) : TimeSpan.Zero
         };
         view.BeginAnimation(OpacityProperty, fade);
     }
 
+    // The equaliser loops forever, so it only runs while the music capsule is actually on screen.
     private void SetEqualiser(bool playing)
     {
-        if (playing == _equaliserRunning) return;
-        _equaliserRunning = playing;
+        _mediaPlaying = playing;
+        bool run = playing && _state == IslandState.Capsule && _main == Kind.Music;
+        if (run == _equaliserRunning) return;
+        _equaliserRunning = run;
 
-        var bars = new[] { Bar1, Bar2, Bar3, Bar4 };
+        var bars = new[] { Bar1, Bar2, Bar3, Bar4, Bar5 };
         for (int i = 0; i < bars.Length; i++)
         {
-            if (playing)
+            if (run)
             {
-                bars[i].BeginAnimation(HeightProperty, new DoubleAnimation(3, 14, TimeSpan.FromMilliseconds(450))
+                var bounce = new DoubleAnimation(4, 16, TimeSpan.FromMilliseconds(450))
                 {
                     AutoReverse = true,
                     RepeatBehavior = RepeatBehavior.Forever,
-                    BeginTime = TimeSpan.FromMilliseconds(i * 150),
+                    BeginTime = TimeSpan.FromMilliseconds(i * 120),
                     EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
-                });
+                };
+                Timeline.SetDesiredFrameRate(bounce, 20);
+                bars[i].BeginAnimation(HeightProperty, bounce);
             }
             else
             {
@@ -519,12 +636,12 @@ public partial class MainWindow : Window
     private void ShowPowerNotice(bool pluggedIn, int percent) =>
         ShowNotice(pluggedIn ? "Charging" : "Unplugged", $"{percent}%",
                    pluggedIn ? ChargingGreen : NormalBrush,
-                   pluggedIn ? NoticeIcon.Bolt : NoticeIcon.Battery, wide: false);
+                   pluggedIn ? NoticeIcon.Bolt : NoticeIcon.Battery);
 
     private enum NoticeIcon { Bolt, Battery, Dot }
 
     // The shared 3-second pop-up: used for power changes and for coding-agent events.
-    private void ShowNotice(string title, string right, Brush color, NoticeIcon icon, bool wide)
+    private void ShowNotice(string title, string detail, Brush color, NoticeIcon icon)
     {
         NoticeBolt.Visibility = icon == NoticeIcon.Bolt ? Visibility.Visible : Visibility.Collapsed;
         NoticeBattery.Visibility = icon == NoticeIcon.Battery ? Visibility.Visible : Visibility.Collapsed;
@@ -532,10 +649,7 @@ public partial class MainWindow : Window
         NoticeDot.Fill = color;
         NoticeTitle.Text = title;
         NoticeTitle.Foreground = color;
-        NoticePercent.Text = right;
-
-        _noticeWide = wide;
-        NoticeView.Width = wide ? AgentNoticeSize.W : NoticeSize.W;
+        NoticePercent.Text = detail;
 
         _notice = true;
         _noticeTimer.Stop();
@@ -549,77 +663,23 @@ public partial class MainWindow : Window
         SettingsService.Changed -= ApplyClockSetting;
         SettingsService.Changed -= ApplyAgentSetting;
         SettingsService.Changed -= ApplyPosition;
+        SettingsService.Changed -= OnSettingsChanged;
         SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
         _clock.Stop();
         _agent.Stop();
         base.OnClosed(e);
     }
 
-    // ----- PC stats ------------------------------------------------------
-
-    private void SetStatsActive(bool active)
-    {
-        FadeView(StatsView, active);
-
-        if (active)
-        {
-            _stats.Baseline();
-            _statsTimer.Interval = TimeSpan.FromMilliseconds(600); // first reading soon, then every 2 s
-            _statsTimer.Start();
-        }
-        else
-        {
-            _statsTimer.Stop();
-        }
-    }
-
-    private async Task UpdateStatsAsync()
-    {
-        _statsTimer.Interval = TimeSpan.FromSeconds(2);
-        if (_sampling) return;
-        _sampling = true;
-
-        try
-        {
-            // Reading the GPU counters takes a few ms; keep it off the UI thread.
-            var s = await Task.Run(_stats.Sample);
-            if (_state != IslandState.Idle) return; // media started while sampling
-
-            SetValue(CpuValue, s.Cpu);
-            SetValue(RamValue, s.Ram);
-            SetValue(GpuValue, s.Gpu);
-            GpuItem.Visibility = s.Gpu is null ? Visibility.Collapsed : Visibility.Visible;
-
-            BatteryItem.Visibility = s.BatteryPercent is null ? Visibility.Collapsed : Visibility.Visible;
-            if (s.BatteryPercent is int pct)
-            {
-                BoltIcon.Visibility = s.PluggedIn ? Visibility.Visible : Visibility.Collapsed;
-                BatteryValue.Text = $"{pct}%";
-                BatteryValue.Foreground = pct <= 20 && !s.PluggedIn ? WarnBrush : NormalBrush;
-            }
-        }
-        finally
-        {
-            _sampling = false;
-        }
-    }
-
-    // High load turns the value red so a glance is enough.
-    private static void SetValue(TextBlock text, double? value)
-    {
-        if (value is null) { text.Text = "--"; text.Foreground = NormalBrush; return; }
-        text.Text = $"{value:0}%";
-        text.Foreground = value >= 85 ? WarnBrush : NormalBrush;
-    }
-
     // ----- Progress ------------------------------------------------------
 
     private void UpdateProgress()
     {
-        if (_state != IslandState.Expanded) return;
+        bool inCard = _state == IslandState.Card && _cardKind == Kind.Music;
+        bool inBubble = _bubbleKind == Kind.Music;
+        if (!inCard && !inBubble) return;
 
         var timeline = _media.GetTimeline();
-        if (timeline is null)
+        if (timeline is null || timeline.Duration.TotalSeconds <= 0)
         {
             _progressRatio = 0;
             CurrentTime.Text = "0:00";
@@ -627,12 +687,13 @@ public partial class MainWindow : Window
         }
         else
         {
-            _progressRatio = timeline.Position.TotalSeconds / timeline.Duration.TotalSeconds;
+            _progressRatio = Math.Clamp(timeline.Position.TotalSeconds / timeline.Duration.TotalSeconds, 0, 1);
             CurrentTime.Text = FormatTime(timeline.Position);
-            TotalTime.Text = FormatTime(timeline.Duration);
+            TotalTime.Text = "-" + FormatTime(timeline.Duration - timeline.Position);
         }
 
-        ProgressFill.Width = ProgressTrack.ActualWidth * _progressRatio;
+        if (inCard) ProgressFill.Width = ProgressTrack.ActualWidth * _progressRatio;
+        if (inBubble) BubbleMusicRing.StrokeDashArray = Dash(42, 2.4, _progressRatio);
     }
 
     private void ProgressTrack_SizeChanged(object sender, SizeChangedEventArgs e) =>
@@ -649,7 +710,10 @@ public partial class MainWindow : Window
         _leaveTimer.Stop();
         if (SettingsService.Current.ExpandTrigger != ExpandTrigger.Hover) return;
 
+        // Already open (for example showing the bubble's card): the card must not flip back under the pointer.
+        if (_hovering) return;
         _hovering = true;
+        _hoverSide = false;
         ApplyState();
     }
 
@@ -658,18 +722,20 @@ public partial class MainWindow : Window
         // Releasing after a drag moves the island; it must not also count as a click.
         if (FinishPressAsDrag()) { e.Handled = true; return; }
 
-        // In Click mode a click on the compact pill expands it (buttons are not
+        // In Click mode a click on the capsule expands it (buttons are not
         // clickable until expanded, so this never fires for them).
         if (SettingsService.Current.ExpandTrigger != ExpandTrigger.Click) return;
 
         _leaveTimer.Stop();
+        if (_hovering) return;
         _hovering = true;
+        _hoverSide = false;
         ApplyState();
     }
 
     private void Pill_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        // Short delay so a quick wobble out of the pill doesn't collapse it.
+        // Short delay so a quick wobble out of the island (or across the gap to the bubble) doesn't collapse it.
         _leaveTimer.Stop();
         _leaveTimer.Start();
     }

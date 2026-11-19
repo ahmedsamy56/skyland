@@ -10,6 +10,14 @@ public enum ExpandTrigger
     Click
 }
 
+/// <summary>What the optional performance bubble on the left of the island shows.</summary>
+public enum PerfBubbleMode
+{
+    Off,
+    Rings,   // four concentric rings: CPU, memory, GPU, battery
+    Cpu      // one ring with the CPU percentage inside
+}
+
 /// <summary>
 /// User settings stored in %AppData%\DynamicIsland\settings.json.
 /// "Start with Windows" is not stored here: the registry Run key is its source of truth.
@@ -41,6 +49,13 @@ public sealed class AppSettings
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public ExpandTrigger ExpandTrigger { get; set; } = ExpandTrigger.Hover;
+
+    /// <summary>The ring-gauge bubble for PC performance on the left of the island. Off by default.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public PerfBubbleMode PerfBubble { get; set; } = PerfBubbleMode.Off;
+
+    /// <summary>A short alert under the island when the CPU, memory or GPU is heavily loaded or the battery is low.</summary>
+    public bool ShowLoadAlerts { get; set; } = true;
 }
 
 public static class SettingsService

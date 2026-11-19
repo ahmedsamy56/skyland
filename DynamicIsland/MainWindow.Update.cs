@@ -67,7 +67,7 @@ public partial class MainWindow
 
         UpdateText.Text = updates.Status switch
         {
-            UpdateStatus.Available when updates.Available is { } u => $"SkyLand {UpdateService.Format(u.Version)} is available",
+            UpdateStatus.Available when updates.Available is { } u => $"Update {UpdateService.Format(u.Version)} ready",
             UpdateStatus.Downloading => updates.StatusText,
             UpdateStatus.Installing => "Installing the update...",
             UpdateStatus.Failed => "Update failed. Try again in Settings.",
