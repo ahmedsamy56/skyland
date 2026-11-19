@@ -21,7 +21,8 @@ SkyLand, by SkyZack: a Windows 11 "dynamic island", a black pill pinned to the t
 | Expanded | mouse hovers the pill (or click, per settings; or track-change pop-up) | 400 x 132: artwork, title, artist, previous / play-pause / next, progress bar |
 
 - Spring animation on expand, ease-in-out on collapse; collapse is delayed 250 ms after the mouse leaves.
-- Primary monitor only. Pure black pill.
+- **Moving the island:** press and hold anywhere on the pill (not on a button or dot) and drag it where you like, for example below a browser's tab strip. The position is saved and restored at the next start (`IslandLeft` / `IslandTop` in the settings file, in DIPs). It snaps to the default top-centre spot when within about 14 DIPs, and is clamped so the window always stays on the visible desktop (also re-clamped when the resolution or monitors change). Reset with Settings > Position > Reset position or the tray menu. A press that moves less than 5 DIPs is a click, not a drag (code: `MainWindow.Position.cs`).
+- Starts on the primary monitor, top centre. Pure black pill.
 - The window is non-activating (never takes focus), hidden from the taskbar and Alt+Tab, and always on top.
 - The window is sized for the expanded pill; the area around the pill is fully transparent, so clicks pass through to apps underneath.
 
@@ -106,6 +107,7 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | Section | Setting | Default | Effect |
 |---------|---------|---------|--------|
 | General | Start with Windows | off | Adds/removes the Run registry value |
+| General | Position: Reset position | top centre | Forgets the dragged position (also in the tray menu) |
 | Island | Expand when you: Hover / Click | Hover | Hover expands on mouse enter; Click expands on click of the compact pill. Both collapse 250 ms after the mouse leaves |
 | Island | Pop up on track change | off | Expands for 3 s when the track changes (not on app start, pause or resume) |
 | Integrations | Sync Microsoft Clock | on | Mirrors Clock's Focus sessions and timers (see above) |
@@ -127,6 +129,7 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | `Services/ClaudeHookInstaller.cs` | Connect / Disconnect: merges the hooks into `~/.claude/settings.json` |
 | `../DynamicIsland.Hook/` | `island-hook.exe`, the tiny program Claude Code runs on each hook event |
 | `Services/UpdateService.cs` | GitHub release check, SHA-256 verified download, runs the MSI |
+| `MainWindow.Position.cs` | Drag to move, snap to the default spot, clamp to the screen, restore on start |
 | `MainWindow.Update.cs` | The update prompt and progress in the island, and the check schedule |
 | `../Installer/Package.wxs`, `build-installer.ps1` | WiX package definition and the script that builds the MSI and its checksum |
 | `Services/ClockSyncService.cs` | Reads Microsoft Clock's Focus session and timers via UI Automation (read-only) |

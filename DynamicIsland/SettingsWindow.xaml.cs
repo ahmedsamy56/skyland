@@ -48,6 +48,8 @@ public partial class SettingsWindow : Window
         SettingsService.Save();
     }
 
+    private void ResetPositionButton_Click(object sender, RoutedEventArgs e) => SettingsService.ResetPosition();
+
     // ----- Updates -------------------------------------------------------
 
     private void OnUpdatesChanged() => Dispatcher.InvokeAsync(RefreshUpdateRow);

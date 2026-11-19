@@ -24,6 +24,8 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
                 Margin="0,6,0,0"
+                MouseLeftButtonDown="Pill_MouseLeftButtonDown"
+                MouseMove="Pill_MouseMove"
                 MouseLeftButtonUp="Pill_MouseLeftButtonUp"
                 MouseEnter="Pill_MouseEnter"
                 MouseLeave="Pill_MouseLeave">

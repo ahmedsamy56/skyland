@@ -18,11 +18,16 @@ public sealed class TrayService : IDisposable
         var settingsItem = new ToolStripMenuItem("Settings...");
         settingsItem.Click += (_, _) => openSettings();
 
+        // Handy if the island was dragged somewhere awkward.
+        var resetItem = new ToolStripMenuItem("Reset position");
+        resetItem.Click += (_, _) => SettingsService.ResetPosition();
+
         var exitItem = new ToolStripMenuItem("Exit");
         exitItem.Click += (_, _) => exit();
 
         var menu = new ContextMenuStrip();
         menu.Items.Add(settingsItem);
+        menu.Items.Add(resetItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exitItem);
 

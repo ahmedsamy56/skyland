@@ -114,9 +114,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // Centre on the primary monitor, flush with the top edge.
-        Left = (SystemParameters.PrimaryScreenWidth - Width) / 2;
-        Top = 0;
+        // Where the user left it, or centred on the primary monitor flush with the top edge.
+        InitPosition();
+        ApplyPosition();
 
         _leaveTimer.Tick += (_, _) =>
         {
@@ -548,6 +548,8 @@ public partial class MainWindow : Window
         SystemEvents.PowerModeChanged -= OnPowerModeChanged; // static events: would otherwise keep the window alive
         SettingsService.Changed -= ApplyClockSetting;
         SettingsService.Changed -= ApplyAgentSetting;
+        SettingsService.Changed -= ApplyPosition;
+        SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
         _clock.Stop();
         _agent.Stop();
         base.OnClosed(e);
@@ -653,6 +655,9 @@ public partial class MainWindow : Window
 
     private void Pill_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        // Releasing after a drag moves the island; it must not also count as a click.
+        if (FinishPressAsDrag()) { e.Handled = true; return; }
+
         // In Click mode a click on the compact pill expands it (buttons are not
         // clickable until expanded, so this never fires for them).
         if (SettingsService.Current.ExpandTrigger != ExpandTrigger.Click) return;

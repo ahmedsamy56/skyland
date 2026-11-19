@@ -59,6 +59,22 @@
                 </Grid>
             </Border>
 
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <Grid Margin="16,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Position" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="Drag the island anywhere on screen with the mouse. It remembers the spot and snaps back to the top centre when you get close." Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <Button x:Name="ResetPositionButton" Grid.Column="1" VerticalAlignment="Center"
+                            Content="Reset position" Style="{StaticResource PillButton}"
+                            Click="ResetPositionButton_Click" />
+                </Grid>
+            </Border>
+
             <!-- ISLAND -->
             <TextBlock Text="ISLAND" Style="{StaticResource SectionLabel}" />
             <Border Style="{StaticResource Card}">

@@ -24,6 +24,10 @@ public sealed class AppSettings
     /// <summary>Show Claude Code sessions (needs the hooks from Settings > Connect Claude Code).</summary>
     public bool ShowAgentStatus { get; set; } = true;
 
+    /// <summary>Where the user dragged the island (window position in DIPs). Null = top centre of the primary screen.</summary>
+    public double? IslandLeft { get; set; }
+    public double? IslandTop { get; set; }
+
     /// <summary>Look for a newer SkyLand on start and about once a day, and offer it in the island.</summary>
     public bool AutoCheckUpdates { get; set; } = true;
 
@@ -61,6 +65,14 @@ public static class SettingsService
             // Corrupt or unreadable file: fall back to defaults.
         }
         return new AppSettings();
+    }
+
+    /// <summary>Forget the dragged position: the island goes back to the top centre of the primary screen.</summary>
+    public static void ResetPosition()
+    {
+        Current.IslandLeft = null;
+        Current.IslandTop = null;
+        Save();
     }
 
     /// <summary>Raised after every Save, on the calling (UI) thread.</summary>
