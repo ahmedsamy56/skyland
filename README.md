@@ -80,7 +80,7 @@ NEXUS/                an unused WinUI 3 template project, kept for reference
 
 ## Credits
 
-SkyLand is made by **SkyZack**.
+SkyLand is made by [**C B Sajan**](https://github.com/cbsajan), under the **SkyZack** name.
 
 ## License
 

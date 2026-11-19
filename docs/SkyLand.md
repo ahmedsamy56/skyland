@@ -3,7 +3,7 @@
 SkyLand, by SkyZack: a Windows 11 "dynamic island", a black pill pinned to the top-centre of the primary monitor that shows the current media session and expands on hover. Formerly called Dynamic Island, which is why the code namespaces, project folders and the settings folder (`%AppData%\DynamicIsland`) keep that name.
 
 ## License
-Apache License 2.0 (`LICENSE`, verbatim from the official text) with a short `NOTICE` file ("Copyright 2026 SkyZack"). The license covers the source code only; the SkyLand and SkyZack names, logos and the app icon are not licensed for use in forks (stated in the README).
+Apache License 2.0 (`LICENSE`, verbatim from the official text) with a short `NOTICE` file ("Copyright 2026 C B Sajan (https://github.com/cbsajan)", published under the SkyZack name). The license covers the source code only; the SkyLand and SkyZack names, logos and the app icon are not licensed for use in forks (stated in the README).
 
 ## Branding
 - Name: **SkyLand**. Exe: `SkyLand.exe` (`<AssemblyName>` in `DynamicIsland.csproj`). Window, tray and Settings titles say SkyLand; the Settings footer reads "SkyLand 1.0.0 · by SkyZack".
