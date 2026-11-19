@@ -84,4 +84,8 @@ SkyLand is made by **SkyZack**.
 
 ## License
 
-No license has been chosen yet, which means all rights are reserved. If you want to use or contribute to the code, please open an issue first.
+SkyLand is licensed under the [Apache License 2.0](LICENSE): you may use, modify and distribute it, including commercially, as long as you keep the license and the [NOTICE](NOTICE) file and state your changes. It comes with no warranty.
+
+The license covers the source code. It does not give you the right to use the **SkyLand** or **SkyZack** names or logos to promote your own product, so if you fork it, please rename it and use your own icon.
+
+Contributions are welcome; by sending one you agree that it is licensed under the same terms.
