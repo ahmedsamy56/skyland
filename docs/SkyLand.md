@@ -81,7 +81,7 @@ Claude Code hook event --> island-hook.exe --> named pipe "DynamicIsland.Agent" 
 ### Limits
 - An interrupted turn (Esc) sends no `Stop` event, so a session silent for 10 minutes while "working" is treated as idle; idle sessions are forgotten after 1 hour.
 - Each tool call runs the hook twice (Pre and Post), about 50-80 ms of .NET startup each. It needs the .NET 8 runtime (installed on this PC).
-- Troubleshooting the hook: set `ISLAND_HOOK_DEBUG=1`; errors go to `%TEMP%\island-hook.log`. `ISLAND_CLAUDE_SETTINGS` points the installer at another settings file (used by tests).
+- Troubleshooting the hook: set `ISLAND_HOOK_DEBUG=1`; errors go to `%TEMP%\island-hook.log`. `ISLAND_CLAUDE_SETTINGS` points the installer at another settings file (used by tests). `ISLAND_PIPE_NAME` makes both the island and the hook use another pipe name, so a second island (for example for screenshots) can be fed simulated sessions without the real Claude sessions appearing in it; `SKYLAND_HIDE_MEDIA=1` makes the island ignore the media player (no song or artwork on screen). The hook ignores a UTF-8 byte-order mark in its input, which some shells add when piping.
 - Tested: the pipe, state machine and pop-ups through the real hook exe with simulated events, and the Connect/Disconnect logic on a throwaway settings file (19 checks). Not yet tested live with real Claude Code sessions.
 
 ## Microsoft Clock sync (Focus sessions and timers)
@@ -199,10 +199,11 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 ### How the in-app updater works (`Services/UpdateService.cs`, `MainWindow.Update.cs`)
 - Checks the latest release of `cbsajan/skyland` through the GitHub API: 20 s after the app starts, then every 6 h but at most about once a day. Turn off in Settings > Updates > Check for updates automatically; the **Check for updates** button always works.
 - A newer version shows a prompt in the island: **"Update 1.1.0 ready" [Install] [Later]**. Later hides it for 24 h. Install shows download progress in the island, then runs the MSI (`msiexec /i ... /passive`, no admin prompt), which closes the app, replaces the files and starts the new version.
-- **Verification:** the installer is downloaded over HTTPS from GitHub hosts only, and run only if its SHA-256 equals the hash in the release's `.msi.sha256` file; a mismatch deletes the download and installs nothing. While releases are **unsigned** this protects against corrupted or swapped downloads but not against someone who controls the GitHub repository; a code-signing certificate would close that gap (the next step would be to make the updater check the signature too).
+- **Verification:** the installer is downloaded over HTTPS from GitHub hosts only, and run only if its SHA-256 equals the expected hash; a mismatch deletes the download and installs nothing. While releases are **unsigned** this protects against corrupted or swapped downloads but not against someone who controls the GitHub repository; a code-signing certificate would close that gap (the next step would be to make the updater check the signature too).
+- **Where the expected hash comes from:** the `digest` field GitHub adds to each release asset in the API answer (computed by GitHub on upload), so the check needs no second request. Only if that field is missing does it download the release's `.msi.sha256` file. The check has its own 20 s limit (the HTTP client's 10 minutes are for the download). Reason: fetching the `.sha256` file redirects to `release-assets.githubusercontent.com`, and on this PC .NET needed about 20 s for that first connection (curl needed 1 s), most likely a certificate revocation lookup; the check felt stuck. The installer download itself still goes to that host, so its first bytes can take a while to arrive.
 - Test seam: environment variable `SKYLAND_UPDATE_URL` replaces the GitHub URL (and lifts the host allow-list) so the flow can be tested against a local server. Never set it in normal use.
 - Tested end to end on this PC: install 1.0.0 silently, detect and install 1.0.1 through the app's own Install button (about 18 s, new version running, autostart/hooks/shortcuts intact), a download with a wrong checksum refused, then uninstall (everything removed).
-- Not yet tested: the real GitHub path (the repository `cbsajan/skyland` does not exist yet, or is private).
+- Real GitHub path: the check was measured against the published 1.1.0 release (0.4-0.7 s with the API digest). The in-app Install of a real release has not been tested yet.
 
 ## Run
 Development:

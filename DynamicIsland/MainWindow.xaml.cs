@@ -48,6 +48,9 @@ public partial class MainWindow : Window
     private const string PlayGlyph = "";    // Segoe Fluent Icons: Play
     private const string PauseGlyph = "";   // Segoe Fluent Icons: Pause
 
+    // Test seam for screenshots only: SKYLAND_HIDE_MEDIA=1 ignores the media player, so no song or artwork shows.
+    private static readonly bool HideMedia = Environment.GetEnvironmentVariable("SKYLAND_HIDE_MEDIA") == "1";
+
     private readonly MediaService _media = new();
     // How long the pointer may be outside the island before a card collapses (the collapse itself is animated).
     private static readonly TimeSpan CollapseDelay = TimeSpan.FromMilliseconds(250);
@@ -166,7 +169,7 @@ public partial class MainWindow : Window
     {
         // Events can overlap; only the latest refresh may update the UI.
         int version = ++_refreshVersion;
-        var snapshot = await _media.GetSnapshotAsync();
+        var snapshot = HideMedia ? null : await _media.GetSnapshotAsync();
         if (version != _refreshVersion) return;
 
         _current = snapshot;

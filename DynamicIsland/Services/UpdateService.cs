@@ -35,6 +35,8 @@ public sealed class UpdateService
         "release-assets.githubusercontent.com", "github-releases.githubusercontent.com"
     ];
 
+    private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(20);
+
     private static readonly HttpClient Http = CreateClient();
 
     private static HttpClient CreateClient()
@@ -73,7 +75,10 @@ public sealed class UpdateService
             Set(UpdateStatus.Checking, "Checking for updates...");
             string url = OverrideUrl ?? $"https://api.github.com/repos/{Repo}/releases/latest";
 
-            string json = await Http.GetStringAsync(url);
+            // The client allows 10 minutes for the big download; the check itself must never hang that long.
+            using var timeout = new CancellationTokenSource(CheckTimeout);
+
+            string json = await Http.GetStringAsync(url, timeout.Token);
             var release = JsonNode.Parse(json) as JsonObject;
             string tag = release?["tag_name"]?.GetValue<string>() ?? "";
 
@@ -91,12 +96,17 @@ public sealed class UpdateService
             }
 
             var assets = release?["assets"] as JsonArray ?? [];
-            string? msiName = null, msiUrl = null, shaUrl = null;
+            string? msiName = null, msiUrl = null, shaUrl = null, apiDigest = null;
             foreach (var asset in assets)
             {
                 string name = asset?["name"]?.GetValue<string>() ?? "";
                 string link = asset?["browser_download_url"]?.GetValue<string>() ?? "";
-                if (name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase)) { msiName = name; msiUrl = link; }
+                if (name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
+                {
+                    msiName = name;
+                    msiUrl = link;
+                    apiDigest = asset?["digest"]?.GetValue<string>();   // "sha256:<hex>", computed by GitHub when the file was uploaded
+                }
             }
             foreach (var asset in assets)
             {
@@ -108,10 +118,19 @@ public sealed class UpdateService
             if (msiName is null || msiUrl is null || shaUrl is null)
                 return Fail($"Version {Format(latest)} exists but has no installer with a checksum, so it was not offered.");
 
-            string hashText = (await Http.GetStringAsync(RequireAllowed(shaUrl))).Trim();
-            string hash = hashText.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)[0];
+            // The hash comes from the release data GitHub already sent (no extra request). Fetching the .sha256 file
+            // redirects to another GitHub host, and that first connection can take 20 s on some PCs (certificate
+            // revocation lookup), which made the check feel stuck. The file is only read when GitHub gave no digest.
+            string? hash = apiDigest is not null && apiDigest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)
+                ? apiDigest["sha256:".Length..]
+                : null;
+            if (hash is null)
+            {
+                string hashText = (await Http.GetStringAsync(RequireAllowed(shaUrl), timeout.Token)).Trim();
+                hash = hashText.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)[0];
+            }
             if (hash.Length != 64 || !hash.All(Uri.IsHexDigit))
-                return Fail("The release checksum file is not a valid SHA-256 hash.");
+                return Fail("The release checksum is not a valid SHA-256 hash.");
 
             RequireAllowed(msiUrl);
             Available = new UpdateInfo(latest, msiName, msiUrl, hash, release?["body"]?.GetValue<string>() ?? "");

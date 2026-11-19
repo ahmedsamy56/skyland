@@ -11,7 +11,8 @@ using System.Text.Json.Nodes;
 // Design rules: never write to stdout or stderr, never block, and always exit 0, so this tool can
 // not change how Claude Code behaves. If the island is not running the connect simply times out.
 
-const string PipeName = "DynamicIsland.Agent";
+// ISLAND_PIPE_NAME is a test seam (screenshots, tests): it lets a second island listen on its own pipe.
+string PipeName = Environment.GetEnvironmentVariable("ISLAND_PIPE_NAME") is { Length: > 0 } custom ? custom : "DynamicIsland.Agent";
 
 // Started by hand (double-click, or a terminal with nothing piped in): there is no event to read,
 // and waiting for input would leave the process hanging forever.
@@ -19,7 +20,8 @@ if (!Console.IsInputRedirected) return 0;
 
 try
 {
-    string input = Console.In.ReadToEnd();
+    // Some shells put a UTF-8 byte-order mark in front of what they pipe; JSON parsing rejects it.
+    string input = Console.In.ReadToEnd().TrimStart('﻿');
     if (JsonNode.Parse(input) is not JsonObject root) return 0;
 
     string tool = Str(root, "tool_name");

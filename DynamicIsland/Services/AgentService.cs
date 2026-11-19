@@ -24,7 +24,8 @@ public sealed record AgentNotice(AgentNoticeKind Kind, string Project, string De
 /// </summary>
 public sealed class AgentService
 {
-    public const string PipeName = "DynamicIsland.Agent";
+    // ISLAND_PIPE_NAME is a test seam (screenshots, tests): it lets a second island listen on its own pipe.
+    public static readonly string PipeName = Environment.GetEnvironmentVariable("ISLAND_PIPE_NAME") is { Length: > 0 } custom ? custom : "DynamicIsland.Agent";
 
     /// <summary>When the last hook event arrived (null: none since the island started). Shown in Settings to help diagnose.</summary>
     public static DateTime? LastEventUtc { get; private set; }

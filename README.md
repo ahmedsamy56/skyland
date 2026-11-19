@@ -6,7 +6,7 @@
 
 <p align="center">
   A Dynamic Island for Windows 11, by SkyZack.<br>
-  A small black pill at the top of your screen that shows what is going on, and gets out of the way when it is not.
+  A small black capsule at the top of your screen that shows what is going on, and gets out of the way when it is not.
 </p>
 
 <p align="center">
@@ -15,17 +15,50 @@
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/capsule-claude.png" width="400" alt="The island showing a working Claude Code session">
+  <br><sub>One thing at a time: a Claude Code session working, with its timer.</sub>
+</p>
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/capsule-claude-multi.png" alt="Three Claude Code sessions, one needs permission"><br><sub>Several sessions: one needs you.</sub></td>
+    <td align="center"><img src="docs/images/card-claude.png" alt="The Claude Code card listing three sessions"><br><sub>Hover for the card.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/capsule-music.png" alt="The island showing the song that is playing"><br><sub>Music: title, artist, equaliser.</sub></td>
+    <td align="center"><img src="docs/images/card-music.png" alt="The music card with progress and controls"><br><sub>Hover for the player.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/capsule-claude-music.png" alt="Claude Code in the capsule and the music in the round bubble"><br><sub>Two things at once: Claude, with music in the bubble.</sub></td>
+    <td align="center"><img src="docs/images/card-music-bubble.png" alt="Hovering the bubble opens the music player while Claude shrinks into the bubble"><br><sub>Hover the bubble: the player opens, Claude shrinks into it.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/idle.png" alt="The idle island showing CPU, memory, GPU and battery"><br><sub>Idle: your PC stats.</sub></td>
+    <td align="center"><img src="docs/images/card-system.png" alt="The System card with four ring gauges"><br><sub>Hover the idle island: ring gauges.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/alert.png" alt="An alert under the island: High Memory load"><br><sub>A short alert under the island for heavy load or a low battery.</sub></td>
+    <td align="center"><img src="docs/images/perf-rings.png" alt="The optional performance ring bubble on the left"><br><sub>Optional performance rings on the left.</sub></td>
+  </tr>
+</table>
+
 ## What it shows
+
+The island works like the iOS Dynamic Island: **one main thing at a time, plus a small round bubble** for the second.
 
 | | |
 |---|---|
+| **Claude Code** | Which [Claude Code](https://claude.com/claude-code) sessions are working, for how long, and an alert the moment one needs you. The card lists every session. |
+| **Focus and timers** | Your [Microsoft Clock](https://apps.microsoft.com/detail/9wzdncrfj3pr) Focus sessions and timers, with a progress ring and the session count. |
 | **Media** | Title, artist and artwork of whatever is playing (Spotify, browsers, any player in the Windows media flyout), with play, pause, next and previous. |
-| **PC stats** | CPU, memory, GPU and battery at a glance when nothing else is happening. |
+| **PC stats** | CPU, memory, GPU and battery when nothing else is on, and along the bottom of the main card. |
+| **Alerts** | A short line under the island when the CPU, memory or GPU stays heavily loaded, or the battery is low. It shows once, then stays quiet for two minutes. |
 | **Charging** | A short pop-up when you plug in or unplug the charger. |
-| **Focus and timers** | Your [Microsoft Clock](https://apps.microsoft.com/detail/9wzdncrfj3pr) Focus sessions and timers, with a progress ring and session dots. |
-| **Claude Code** | Which [Claude Code](https://claude.com/claude-code) sessions are working, for how long, and an alert the moment one needs you. |
 
-Hover the pill (or click it, your choice in Settings) to expand it. **Drag it anywhere** on screen, for example below your browser tabs; it remembers the spot and snaps back to the top centre when you get close.
+The most important thing (Claude, then Focus, then music) is the **main capsule**; the next one is the **bubble** beside it. Hover the capsule to open its card, or hover the bubble to open that card instead, for example the music player while Claude is running. You can also turn on a small **performance ring** bubble on the left (Settings > Island). **Drag the island anywhere** on screen, for example below your browser tabs; it remembers the spot and snaps back to the top centre when you get close.
 
 ## Install
 
@@ -41,7 +74,7 @@ It installs for the current user only, so there is **no admin prompt**. SkyLand 
 ## Use it
 
 - **Tray icon:** double-click for Settings; right-click for *Settings*, *Reset position* and *Exit*.
-- **Settings** has switches for the expand trigger (hover or click), pop-up on track change, Microsoft Clock sync, Claude Code status, automatic updates, and a *Reset position* button.
+- **Settings** has switches for the expand trigger (hover or click), pop-up on track change, the performance ring, heavy-load and low-battery alerts, Microsoft Clock sync, Claude Code status, automatic updates, and a *Reset position* button.
 
 ### Claude Code
 
