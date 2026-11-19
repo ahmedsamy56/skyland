@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace DynamicIsland.Services;
@@ -14,7 +13,7 @@ public sealed class TrayService : IDisposable
 
     public TrayService(Action openSettings, Action exit)
     {
-        _iconImage = CreateIcon();
+        _iconImage = LoadIcon();
 
         var settingsItem = new ToolStripMenuItem("Settings...");
         settingsItem.Click += (_, _) => openSettings();
@@ -30,43 +29,33 @@ public sealed class TrayService : IDisposable
         _icon = new NotifyIcon
         {
             Icon = _iconImage,
-            Text = "Dynamic Island",
+            Text = "SkyLand",
             ContextMenuStrip = menu,
             Visible = true
         };
         _icon.DoubleClick += (_, _) => openSettings();
     }
 
-    // A small black pill with a light outline, readable on light and dark taskbars.
-    private static Icon CreateIcon()
+    // The SkyLand icon embedded in the app. The .ico holds 16-256 px; Windows is asked for the
+    // size that fits the tray at the current display scaling.
+    private static Icon LoadIcon()
     {
-        using var bmp = new Bitmap(32, 32);
-        using (var g = Graphics.FromImage(bmp))
+        try
         {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            var rect = new Rectangle(2, 10, 27, 12);
-
-            using var path = new GraphicsPath();
-            int d = rect.Height;
-            path.AddArc(rect.X, rect.Y, d, d, 90, 180);
-            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 180);
-            path.CloseFigure();
-
-            using var fill = new SolidBrush(Color.Black);
-            using var outline = new Pen(Color.FromArgb(200, 255, 255, 255), 2);
-            g.FillPath(fill, path);
-            g.DrawPath(outline, path);
+            var resource = System.Windows.Application.GetResourceStream(
+                new Uri("pack://application:,,,/Assets/skyland.ico"));
+            if (resource is not null)
+            {
+                using var stream = resource.Stream;
+                return new Icon(stream, SystemInformation.SmallIconSize);
+            }
         }
-
-        nint hIcon = bmp.GetHicon();
-        using var temp = Icon.FromHandle(hIcon);
-        var icon = (Icon)temp.Clone(); // own copy, so the native handle can be released
-        DestroyIcon(hIcon);
-        return icon;
+        catch
+        {
+            // fall through to a stock icon rather than failing to start
+        }
+        return (Icon)SystemIcons.Application.Clone();
     }
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool DestroyIcon(nint handle);
 
     public void Dispose()
     {

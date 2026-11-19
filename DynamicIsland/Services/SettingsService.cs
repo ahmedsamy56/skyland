@@ -24,6 +24,17 @@ public sealed class AppSettings
     /// <summary>Show Claude Code sessions (needs the hooks from Settings > Connect Claude Code).</summary>
     public bool ShowAgentStatus { get; set; } = true;
 
+    /// <summary>Look for a newer SkyLand on start and about once a day, and offer it in the island.</summary>
+    public bool AutoCheckUpdates { get; set; } = true;
+
+    public DateTime? LastUpdateCheckUtc { get; set; }
+
+    /// <summary>"Later" on the update prompt: do not offer again before this time.</summary>
+    public DateTime? UpdateSnoozeUntilUtc { get; set; }
+
+    /// <summary>Set once the installer's "start with Windows by default" has been applied, so an update never re-enables it after the user turned it off.</summary>
+    public bool AutostartDefaultApplied { get; set; }
+
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public ExpandTrigger ExpandTrigger { get; set; } = ExpandTrigger.Hover;
 }

@@ -19,6 +19,14 @@ public partial class SettingsWindow : Window
         SyncClockToggle.IsChecked = settings.SyncMicrosoftClock;
         AgentToggle.IsChecked = settings.ShowAgentStatus;
         RefreshHookStatus();
+
+        var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        FooterText.Text = $"SkyLand {version?.ToString(3) ?? ""} · by SkyZack";
+
+        AutoUpdateToggle.IsChecked = settings.AutoCheckUpdates;
+        RefreshUpdateRow();
+        App.Updates.Changed += OnUpdatesChanged;
+        Closed += (_, _) => App.Updates.Changed -= OnUpdatesChanged;
         HoverOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Hover;
         ClickOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Click;
     }
@@ -37,6 +45,42 @@ public partial class SettingsWindow : Window
     {
         SettingsService.Current.ExpandTrigger =
             ClickOption.IsChecked == true ? ExpandTrigger.Click : ExpandTrigger.Hover;
+        SettingsService.Save();
+    }
+
+    // ----- Updates -------------------------------------------------------
+
+    private void OnUpdatesChanged() => Dispatcher.InvokeAsync(RefreshUpdateRow);
+
+    private void RefreshUpdateRow()
+    {
+        var updates = App.Updates;
+        UpdateVersionTitle.Text = $"SkyLand {UpdateService.Format(UpdateService.CurrentVersion)}";
+
+        bool busy = updates.Status is UpdateStatus.Checking or UpdateStatus.Downloading or UpdateStatus.Installing;
+        UpdateButton.IsEnabled = !busy;
+        UpdateButton.Content = updates.Status == UpdateStatus.Available && updates.Available is { } u
+            ? $"Install {UpdateService.Format(u.Version)}"
+            : "Check for updates";
+
+        UpdateStatusHint.Text = updates.Status != UpdateStatus.Idle
+            ? updates.StatusText
+            : SettingsService.Current.LastUpdateCheckUtc is { } last
+                ? $"Last checked {last.ToLocalTime():g}."
+                : "Not checked yet.";
+    }
+
+    private async void UpdateButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.Updates.Status == UpdateStatus.Available)
+            await App.Updates.InstallAsync();
+        else
+            await App.Updates.CheckAsync();
+    }
+
+    private void AutoUpdateToggle_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsService.Current.AutoCheckUpdates = AutoUpdateToggle.IsChecked == true;
         SettingsService.Save();
     }
 

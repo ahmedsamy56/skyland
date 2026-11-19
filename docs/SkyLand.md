@@ -1,6 +1,12 @@
-# Dynamic Island (WPF)
+# SkyLand (WPF)
 
-A Windows 11 "dynamic island": a black pill pinned to the top-centre of the primary monitor that shows the current media session and expands on hover.
+SkyLand, by SkyZack: a Windows 11 "dynamic island", a black pill pinned to the top-centre of the primary monitor that shows the current media session and expands on hover. Formerly called Dynamic Island, which is why the code namespaces, project folders and the settings folder (`%AppData%\DynamicIsland`) keep that name.
+
+## Branding
+- Name: **SkyLand**. Exe: `SkyLand.exe` (`<AssemblyName>` in `DynamicIsland.csproj`). Window, tray and Settings titles say SkyLand; the Settings footer reads "SkyLand 1.0.0 · by SkyZack".
+- Icon: `DynamicIsland/Assets/skyland.ico` (16, 24, 32, 48, 64, 128, 256 px), built from the artwork in `skyland-dark.svg` (blue S, white peak) on a `#000000` rounded tile; the 16 to 32 px sizes use larger artwork so they stay readable. Source with the background: `Assets/skyland-icon.svg`. It is used as the exe icon (`ApplicationIcon`), the tray icon and the Settings window icon (embedded as a WPF `Resource`).
+- Renaming deliberately changed only what users see. Internal names are unchanged so nothing breaks: namespaces, project folders, the single-instance mutex, the pipe `DynamicIsland.Agent`, `island-hook.exe`, and the settings folder.
+- Migration on startup: an autostart entry made under the old name (`DynamicIsland` in the Run key) is moved to `SkyLand` and pointed at the running exe, and the Claude Code hook entries are repointed at this install's `hook\island-hook.exe` if they were connected from another folder.
 
 ## Stack
 - C# / WPF, `net8.0-windows10.0.19041.0`
@@ -43,6 +49,7 @@ Claude Code hook event --> island-hook.exe --> named pipe "DynamicIsland.Agent" 
 - Hook events used: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse` (what it is doing), `PostToolUse` (detects that a permission prompt was answered), `Notification` (permission prompts only; the "waiting for input" prompt after a finished turn is ignored), `Stop` (turn finished).
 - **Connect:** Settings > Integrations > Claude Code hooks > **Connect Claude Code**. This edits `~/.claude/settings.json`: it adds the seven entries (identified by `island-hook` in the command), keeps everything else, and saves a one-time backup as `settings.json.island-backup`. **Disconnect** removes only those entries. Invalid JSON is never touched. Comments in the file are not preserved when it is rewritten. It applies to **new** Claude Code sessions.
 - Toggle: Settings > Integrations > Claude Code status (on by default).
+- Running `island-hook.exe` by hand (double-click or an empty terminal) does nothing and exits at once, because it only acts on an event piped in by Claude Code.
 - **Diagnosing "nothing shows":** Settings > Claude Code hooks shows "Last event received N s ago". "No events received" means no Claude Code session has reached the island: hooks are read when a session starts, so start a new one after clicking Connect. The island keeps sessions in memory, so after restarting the island a session reappears on its next event.
 
 ### Limits
@@ -104,6 +111,8 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | Integrations | Sync Microsoft Clock | on | Mirrors Clock's Focus sessions and timers (see above) |
 | Integrations | Claude Code status | on | Shows Claude Code sessions (needs the hooks) |
 | Integrations | Claude Code hooks: Connect / Disconnect | not connected | Adds or removes the island's hooks in `~/.claude/settings.json` |
+| Updates | Check for updates / Install x.y.z | n/a | Looks for a newer release now; installs it when one is found |
+| Updates | Check for updates automatically | on | On start and about daily; you are asked before installing |
 
 **Adding a setting later:** add a property to `AppSettings`, add a row to a section in `SettingsWindow.xaml` (use the `Card`, `RowTitle`, `RowHint`, `ToggleSwitch` styles), save in its `Click` handler, and read `SettingsService.Current` where the feature runs. For a new group, add a `SectionLabel` plus a `Card`.
 
@@ -117,6 +126,9 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | `Services/AgentService.cs` | Named-pipe server and Claude Code session state machine |
 | `Services/ClaudeHookInstaller.cs` | Connect / Disconnect: merges the hooks into `~/.claude/settings.json` |
 | `../DynamicIsland.Hook/` | `island-hook.exe`, the tiny program Claude Code runs on each hook event |
+| `Services/UpdateService.cs` | GitHub release check, SHA-256 verified download, runs the MSI |
+| `MainWindow.Update.cs` | The update prompt and progress in the island, and the check schedule |
+| `../Installer/Package.wxs`, `build-installer.ps1` | WiX package definition and the script that builds the MSI and its checksum |
 | `Services/ClockSyncService.cs` | Reads Microsoft Clock's Focus session and timers via UI Automation (read-only) |
 | `Services/SystemStatsService.cs` | CPU / RAM / GPU / battery sampling for the idle pill |
 | `Services/SettingsService.cs` | `AppSettings` stored as JSON in `%AppData%\DynamicIsland\settings.json`; `SettingsService.Current` is read live by the island |
@@ -132,6 +144,33 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 - Artwork is only reloaded when title, artist or album changes.
 - Progress position is extrapolated from SMTC `LastUpdatedTime`, because players update it only occasionally.
 
+## Installer (MSI) and updates
+
+### What the installer does
+`Installer\build-installer.ps1` builds `dist\SkyLand-<version>.msi` (about 69 MB, self-contained, no .NET needed) with WiX Toolset 5 (`dotnet tool install --global wix --version 5.0.2`, plus the Util extension). WiX 5 is used on purpose: WiX 6/7 ask the user to accept the Open Source Maintenance Fee terms.
+- **Per-user** install to `%LocalAppData%\Programs\SkyLand`: no admin prompt, which is what lets SkyLand update itself silently.
+- Start Menu and Desktop shortcuts; the SkyLand icon in Apps & features.
+- Starts SkyLand when it finishes, with the `--installed` switch: the app then turns **Start with Windows on, the first time only** (`AutostartDefaultApplied` in settings). An update never re-enables it after you turned it off.
+- Same `UpgradeCode` for every version: a newer MSI replaces the installed one (major upgrade); installing an older one is refused.
+- Closes a running SkyLand (and a running `island-hook.exe`) before replacing files.
+- **Uninstall** removes the files, both shortcuts and the Start with Windows entry (it runs `SkyLand.exe --uninstall` first). Your settings (`%AppData%\DynamicIsland`) and your Claude Code hook entries are left alone; Disconnect in Settings removes the hooks.
+- If you move from the portable copy in `D:\Apps` to the installed one, the Start with Windows entry and the Claude hook paths are repointed automatically on first start.
+
+### Release process
+1. Bump `<Version>` in `DynamicIsland\DynamicIsland.csproj` (the only place the version lives).
+2. `cd Installer; .\build-installer.ps1` creates `dist\SkyLand-x.y.z.msi` and `dist\SkyLand-x.y.z.msi.sha256`.
+3. After `gh auth login`: `gh release create vX.Y.Z dist\SkyLand-X.Y.Z.msi dist\SkyLand-X.Y.Z.msi.sha256 --repo cbsajan/skyland --title "SkyLand X.Y.Z" --notes "..."`.
+   The tag must be `v` plus the version, and **both files must be attached**: the app only offers a release that has the `.msi` and a matching `.msi.sha256`.
+4. Signing is optional and off for now: `.\build-installer.ps1 -CertPath C:\keys\skyzack.pfx` signs `SkyLand.exe` and the MSI with `signtool` (Windows SDK). The password is asked at the prompt or read from `SKYLAND_CERT_PASSWORD`; nothing secret is stored in the repo.
+
+### How the in-app updater works (`Services/UpdateService.cs`, `MainWindow.Update.cs`)
+- Checks the latest release of `cbsajan/skyland` through the GitHub API: 20 s after the app starts, then every 6 h but at most about once a day. Turn off in Settings > Updates > Check for updates automatically; the **Check for updates** button always works.
+- A newer version shows a prompt in the island: **"SkyLand 1.1.0 is available" [Install] [Later]**. Later hides it for 24 h. Install shows download progress in the island, then runs the MSI (`msiexec /i ... /passive`, no admin prompt), which closes the app, replaces the files and starts the new version.
+- **Verification:** the installer is downloaded over HTTPS from GitHub hosts only, and run only if its SHA-256 equals the hash in the release's `.msi.sha256` file; a mismatch deletes the download and installs nothing. While releases are **unsigned** this protects against corrupted or swapped downloads but not against someone who controls the GitHub repository; a code-signing certificate would close that gap (the next step would be to make the updater check the signature too).
+- Test seam: environment variable `SKYLAND_UPDATE_URL` replaces the GitHub URL (and lifts the host allow-list) so the flow can be tested against a local server. Never set it in normal use.
+- Tested end to end on this PC: install 1.0.0 silently, detect and install 1.0.1 through the app's own Install button (about 18 s, new version running, autostart/hooks/shortcuts intact), a download with a wrong checksum refused, then uninstall (everything removed).
+- Not yet tested: the real GitHub path (the repository `cbsajan/skyland` does not exist yet, or is private).
+
 ## Run
 Development:
 ```
@@ -143,9 +182,9 @@ dotnet run
 Self-contained single file (about 78 MB, no .NET install needed), published to a stable folder:
 ```
 cd DynamicIsland
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o D:\Apps\DynamicIsland
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o D:\Apps\SkyLand
 ```
-Run `D:\Apps\DynamicIsland\DynamicIsland.exe`, then turn on **Start with Windows** in Settings from that copy, so the registry entry points at the stable path. Quit the running island (tray, Exit) before republishing, or the exe is locked. Only one instance can run, so a `dotnet run` copy and the published copy cannot both be open.
+Run `D:\Apps\SkyLand\SkyLand.exe`, then turn on **Start with Windows** in Settings from that copy, so the registry entry points at the stable path. Quit the running island (tray, Exit) before republishing, or the exe is locked. Only one instance can run, so a `dotnet run` copy and the published copy cannot both be open.
 Quit from the tray icon (right-click, Exit). Launching a second copy exits immediately.
 
 ## Known gaps / next ideas

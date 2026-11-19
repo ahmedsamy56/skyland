@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SkyLand installer (WiX Toolset 5).
+
+  - Per-user: installs to %LocalAppData%\Programs\SkyLand, no admin prompt, so SkyLand can update itself silently.
+  - Same UpgradeCode on every version: a newer MSI replaces the installed one (major upgrade).
+  - Build with Installer\build-installer.ps1, which passes Version and SourceDir.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package Name="SkyLand"
+           Manufacturer="SkyZack"
+           Version="$(Version)"
+           UpgradeCode="7A3C5E2B-4F8D-4A19-9B6E-2D1C0F7E8A54"
+           Scope="perUser"
+           Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of SkyLand is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon.ico" SourceFile="$(SourceDir)\skyland.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+    <Property Id="ARPCOMMENTS" Value="SkyLand, a Dynamic Island for Windows 11, by SkyZack" />
+
+    <!-- Close a running SkyLand (and a hook process holding its files) before files are replaced or removed. -->
+    <util:CloseApplication Id="CloseSkyLand" Target="SkyLand.exe" CloseMessage="yes" RebootPrompt="no" TerminateProcess="0" />
+    <util:CloseApplication Id="CloseIslandHook" Target="island-hook.exe" CloseMessage="no" RebootPrompt="no" TerminateProcess="0" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsDir" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="SkyLand">
+          <Directory Id="HookFolder" Name="hook" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- Files -->
+    <Feature Id="Main" Title="SkyLand" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcutComponent" />
+      <ComponentRef Id="DesktopShortcutComponent" />
+    </Feature>
+
+    <ComponentGroup Id="AppFiles">
+      <Component Id="MainExe" Directory="INSTALLFOLDER">
+        <File Id="SkyLandExe" Source="$(SourceDir)\SkyLand.exe" KeyPath="yes" />
+        <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+      </Component>
+      <Component Id="HookExe" Directory="HookFolder">
+        <File Id="HookExeFile" Source="$(HookDir)\island-hook.exe" KeyPath="yes" />
+        <RemoveFolder Id="RemoveHookFolder" On="uninstall" />
+      </Component>
+      <Component Id="HookDll" Directory="HookFolder">
+        <File Id="HookDllFile" Source="$(HookDir)\island-hook.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="HookDeps" Directory="HookFolder">
+        <File Id="HookDepsFile" Source="$(HookDir)\island-hook.deps.json" KeyPath="yes" />
+      </Component>
+      <Component Id="HookRuntimeConfig" Directory="HookFolder">
+        <File Id="HookRuntimeConfigFile" Source="$(HookDir)\island-hook.runtimeconfig.json" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Shortcuts. Per-user shortcuts need a registry value in HKCU as the component's key path. -->
+    <Component Id="StartMenuShortcutComponent" Directory="ProgramMenuFolder">
+      <Shortcut Id="StartMenuShortcut" Name="SkyLand" Description="SkyLand, a Dynamic Island for Windows 11"
+                Target="[INSTALLFOLDER]SkyLand.exe" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon.ico" />
+      <RegistryValue Root="HKCU" Key="Software\SkyZack\SkyLand" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcutComponent" Directory="DesktopFolder">
+      <Shortcut Id="DesktopShortcut" Name="SkyLand" Description="SkyLand, a Dynamic Island for Windows 11"
+                Target="[INSTALLFOLDER]SkyLand.exe" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon.ico" />
+      <RegistryValue Root="HKCU" Key="Software\SkyZack\SkyLand" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!--
+      After a fresh install or an update, start SkyLand with the "installed" switch. That makes it turn on
+      Start with Windows the first time only (it remembers that, so an update never re-enables it after the user
+      turned it off). Before an uninstall (not an upgrade), the "uninstall" switch makes it remove its
+      Start with Windows entry and exit.
+    -->
+    <CustomAction Id="LaunchSkyLand" FileRef="SkyLandExe" ExeCommand="--installed" Execute="immediate" Return="asyncNoWait" />
+    <CustomAction Id="CleanupSkyLand" FileRef="SkyLandExe" ExeCommand="--uninstall" Execute="immediate" Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="CleanupSkyLand" Before="RemoveFiles" Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="LaunchSkyLand" After="InstallFinalize" Condition="NOT (REMOVE=&quot;ALL&quot;)" />
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix>

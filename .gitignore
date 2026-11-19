@@ -10,3 +10,6 @@ publish/
 
 # Misc
 *.log
+
+# Installer output
+dist/

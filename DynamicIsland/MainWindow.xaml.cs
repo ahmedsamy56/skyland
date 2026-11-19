@@ -12,7 +12,7 @@ namespace DynamicIsland;
 
 public partial class MainWindow : Window
 {
-    private enum IslandState { Idle, Compact, FocusCompact, AgentCompact, Expanded, Notice }
+    private enum IslandState { Idle, Compact, FocusCompact, AgentCompact, Expanded, Notice, Update }
     private enum Page { Media, Focus, Agent }
 
     // Pill sizes, matching the approved design preview.
@@ -40,6 +40,7 @@ public partial class MainWindow : Window
         IslandState.FocusCompact => FocusCompactSize,
         IslandState.AgentCompact => AgentCompactSize,
         IslandState.Notice => _noticeWide ? AgentNoticeSize : NoticeSize,
+        IslandState.Update => (340d, 44d, 22d),
         _ => IdleSize
     };
 
@@ -146,11 +147,13 @@ public partial class MainWindow : Window
         _clock.Updated += (_, snapshot) => Dispatcher.InvokeAsync(() => OnClockUpdated(snapshot));
         SettingsService.Changed += ApplyClockSetting;
         InitAgent();
+        InitUpdates();
 
         Loaded += async (_, _) =>
         {
             ApplyClockSetting();
             ApplyAgentSetting();
+            _ = StartUpdatesAsync();
 
             _media.Changed += (_, _) => Dispatcher.InvokeAsync(RefreshAsync);
             await _media.InitializeAsync();
@@ -235,6 +238,7 @@ public partial class MainWindow : Window
         bool pageChanged = _page != _shownPage;
 
         var target = _notice ? IslandState.Notice
+            : _updatePrompt ? IslandState.Update
             : pages.Count > 0 && (_hovering || _popping) ? IslandState.Expanded
             : agentActive ? IslandState.AgentCompact
             : hasMedia ? IslandState.Compact
@@ -276,6 +280,7 @@ public partial class MainWindow : Window
         FadeView(FocusPageView, target == IslandState.Expanded && _page == Page.Focus);
         FadeView(AgentCardView, target == IslandState.Expanded && _page == Page.Agent);
         FadeView(NoticeView, target == IslandState.Notice);
+        FadeView(UpdateView, target == IslandState.Update);
 
         if (target == IslandState.Expanded) UpdateProgress();
         if (target == IslandState.AgentCompact) UpdateAgentCompact(false);

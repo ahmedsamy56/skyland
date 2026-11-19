@@ -1,7 +1,8 @@
 <Window x:Class="DynamicIsland.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Dynamic Island Settings"
+        Title="SkyLand Settings"
+        Icon="Assets/skyland.ico"
         Width="480" Height="460"
         MinWidth="400" MinHeight="360"
         Background="#111114"
@@ -149,6 +150,44 @@
                     </Grid>
                 </StackPanel>
             </Border>
+
+            <!-- UPDATES -->
+            <TextBlock Text="UPDATES" Style="{StaticResource SectionLabel}" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Grid Margin="16,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock x:Name="UpdateVersionTitle" Style="{StaticResource RowTitle}" />
+                            <TextBlock x:Name="UpdateStatusHint" Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <Button x:Name="UpdateButton" Grid.Column="1" VerticalAlignment="Center"
+                                Style="{StaticResource PillButton}" Click="UpdateButton_Click" />
+                    </Grid>
+
+                    <Border Height="1" Background="#2A2A31" />
+
+                    <Grid Margin="16,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Check for updates automatically" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="When SkyLand starts and about once a day. You are asked before anything is installed." Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <ToggleButton x:Name="AutoUpdateToggle" Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}" Click="AutoUpdateToggle_Click"
+                                      AutomationProperties.Name="Check for updates automatically" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Name="FooterText" Foreground="#6B6B75" FontSize="11.5"
+                       HorizontalAlignment="Center" Margin="0,24,0,0" />
 
         </StackPanel>
     </ScrollViewer>

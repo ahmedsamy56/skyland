@@ -13,6 +13,10 @@ using System.Text.Json.Nodes;
 
 const string PipeName = "DynamicIsland.Agent";
 
+// Started by hand (double-click, or a terminal with nothing piped in): there is no event to read,
+// and waiting for input would leave the process hanging forever.
+if (!Console.IsInputRedirected) return 0;
+
 try
 {
     string input = Console.In.ReadToEnd();

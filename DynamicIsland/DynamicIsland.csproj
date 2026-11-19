@@ -10,7 +10,20 @@
     <!-- WinForms is used only for the tray icon (NotifyIcon). -->
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Product identity. Code namespaces and project names keep their original names on purpose. -->
+    <AssemblyName>SkyLand</AssemblyName>
+    <Product>SkyLand</Product>
+    <Company>SkyZack</Company>
+    <Description>SkyLand, a Dynamic Island for Windows 11</Description>
+    <Version>1.0.0</Version>
+    <ApplicationIcon>Assets\skyland.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Also embedded, so the tray and the Settings window can load it. -->
+    <Resource Include="Assets\skyland.ico" />
+  </ItemGroup>
 
   <!-- The Claude Code hook tool ships in a "hook" folder next to the island. Build it with the island
        and copy it on build and on publish. It is built without the island's runtime identifier. -->

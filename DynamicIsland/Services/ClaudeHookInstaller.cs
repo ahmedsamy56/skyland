@@ -46,6 +46,30 @@ public static class ClaudeHookInstaller
         }
     }
 
+    /// <summary>
+    /// If the hooks were connected from another install folder (for example before the app was moved or
+    /// renamed), point them at this install. Touches only our own entries, and only when already connected.
+    /// </summary>
+    public static void RepairIfMoved()
+    {
+        try
+        {
+            if (!IsConnected() || !File.Exists(HookExePath)) return;
+
+            string expected = HookExePath.Replace('\\', '/');
+            var hooks = JsonNode.Parse(File.ReadAllText(SettingsPath))?["hooks"] as JsonObject;
+            bool allCurrent = hooks!.All(e => e.Value is not JsonArray a
+                || a.Where(IsOurs).All(entry => entry!["hooks"]!.AsArray()
+                    .All(h => h?["command"]?.GetValue<string>()?.Contains(expected, StringComparison.OrdinalIgnoreCase) != false)));
+
+            if (!allCurrent) Connect();
+        }
+        catch
+        {
+            // Not critical: the user can press Connect again in Settings.
+        }
+    }
+
     /// <summary>Returns null on success, otherwise a message for the user.</summary>
     public static string? Connect()
     {
