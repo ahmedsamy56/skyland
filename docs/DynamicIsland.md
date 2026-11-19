@@ -19,6 +19,33 @@ A Windows 11 "dynamic island": a black pill pinned to the top-centre of the prim
 - The window is non-activating (never takes focus), hidden from the taskbar and Alt+Tab, and always on top.
 - The window is sized for the expanded pill; the area around the pill is fully transparent, so clicks pass through to apps underneath.
 
+## Coding agent status (Claude Code)
+The island shows your Claude Code sessions: what each is doing, how long the current turn has run, and when one needs you. Read-only: you still answer in the terminal.
+
+**Collapsed pill (260 x 36)** while any session works: one status dot (violet = working, amber = needs you), project name, elapsed time, and a count badge when more than one is active. With several working sessions the pill slides vertically to the next every 3 s; small dots show which. The agent takes the pill over media and Focus while it works.
+
+**Card (290 px wide)**, shown on hover on the Agents page: one session at a time (ring avatar with the project's first letter, project, current action, duration), sliding between sessions every 3 s with a row of clickable dots underneath. Ring: spinning arc = working, breathing full ring = needs you, empty = idle. Idle-only sessions still show in the card. A session that needs you is pinned: only waiting sessions are shown until you answer.
+
+**Pop-ups (300 x 40, 3 s):** amber "<project> needs you / Permission: Bash"; green "Done · 02:14 / <project>" when a turn that lasted 5 s or more finishes.
+
+**When more than one thing is active** (agents, media, Focus) the card has page dots at the top; clicking one picks the page until the card collapses.
+
+### How it connects
+```
+Claude Code hook event --> island-hook.exe --> named pipe "DynamicIsland.Agent" --> AgentService --> UI
+```
+- `DynamicIsland.Hook` (`island-hook.exe`, in the `hook` folder next to the island) reads the event JSON from stdin and forwards a small summary: event, session id, project folder, tool name, a short detail (file name, first 60 chars of a command, search pattern), notification text. **Prompts and file contents are never sent.** It never writes output and always exits 0, so it cannot change how Claude Code behaves; if the island is not running it gives up after 150 ms.
+- The pipe is `PipeOptions.CurrentUserOnly`: no network, no port, only your Windows user.
+- Hook events used: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse` (what it is doing), `PostToolUse` (detects that a permission prompt was answered), `Notification` (permission prompts only; the "waiting for input" prompt after a finished turn is ignored), `Stop` (turn finished).
+- **Connect:** Settings > Integrations > Claude Code hooks > **Connect Claude Code**. This edits `~/.claude/settings.json`: it adds the seven entries (identified by `island-hook` in the command), keeps everything else, and saves a one-time backup as `settings.json.island-backup`. **Disconnect** removes only those entries. Invalid JSON is never touched. Comments in the file are not preserved when it is rewritten. It applies to **new** Claude Code sessions.
+- Toggle: Settings > Integrations > Claude Code status (on by default).
+
+### Limits
+- An interrupted turn (Esc) sends no `Stop` event, so a session silent for 10 minutes while "working" is treated as idle; idle sessions are forgotten after 1 hour.
+- Each tool call runs the hook twice (Pre and Post), about 50-80 ms of .NET startup each. It needs the .NET 8 runtime (installed on this PC).
+- Troubleshooting the hook: set `ISLAND_HOOK_DEBUG=1`; errors go to `%TEMP%\island-hook.log`. `ISLAND_CLAUDE_SETTINGS` points the installer at another settings file (used by tests).
+- Tested: the pipe, state machine and pop-ups through the real hook exe with simulated events, and the Connect/Disconnect logic on a throwaway settings file (19 checks). Not yet tested live with real Claude Code sessions.
+
 ## Microsoft Clock sync (Focus sessions and timers)
 The island mirrors the Windows Clock app, read-only: you start, pause and stop sessions in Clock, the island shows them.
 
@@ -70,6 +97,8 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | Island | Expand when you: Hover / Click | Hover | Hover expands on mouse enter; Click expands on click of the compact pill. Both collapse 250 ms after the mouse leaves |
 | Island | Pop up on track change | off | Expands for 3 s when the track changes (not on app start, pause or resume) |
 | Integrations | Sync Microsoft Clock | on | Mirrors Clock's Focus sessions and timers (see above) |
+| Integrations | Claude Code status | on | Shows Claude Code sessions (needs the hooks) |
+| Integrations | Claude Code hooks: Connect / Disconnect | not connected | Adds or removes the island's hooks in `~/.claude/settings.json` |
 
 **Adding a setting later:** add a property to `AppSettings`, add a row to a section in `SettingsWindow.xaml` (use the `Card`, `RowTitle`, `RowHint`, `ToggleSwitch` styles), save in its `Click` handler, and read `SettingsService.Current` where the feature runs. For a new group, add a `SectionLabel` plus a `Card`.
 
@@ -79,6 +108,10 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | `App.xaml(.cs)` | Startup, single-instance mutex, tray lifetime, shared `IconButton` style |
 | `Services/TrayService.cs` | Tray icon (drawn in code, WinForms `NotifyIcon`): double-click or "Settings..." opens Settings, "Exit" quits |
 | `Services/StartupService.cs` | Autostart via `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (no admin needed). The registry is the source of truth, not the settings file |
+| `MainWindow.Agent.cs` | Coding agent UI: collapsed pill, one-at-a-time card, avatars, slide animation, pop-ups |
+| `Services/AgentService.cs` | Named-pipe server and Claude Code session state machine |
+| `Services/ClaudeHookInstaller.cs` | Connect / Disconnect: merges the hooks into `~/.claude/settings.json` |
+| `../DynamicIsland.Hook/` | `island-hook.exe`, the tiny program Claude Code runs on each hook event |
 | `Services/ClockSyncService.cs` | Reads Microsoft Clock's Focus session and timers via UI Automation (read-only) |
 | `Services/SystemStatsService.cs` | CPU / RAM / GPU / battery sampling for the idle pill |
 | `Services/SettingsService.cs` | `AppSettings` stored as JSON in `%AppData%\DynamicIsland\settings.json`; `SettingsService.Current` is read live by the island |

@@ -12,8 +12,8 @@ namespace DynamicIsland;
 
 public partial class MainWindow : Window
 {
-    private enum IslandState { Idle, Compact, FocusCompact, Expanded, Notice }
-    private enum Page { Media, Focus }
+    private enum IslandState { Idle, Compact, FocusCompact, AgentCompact, Expanded, Notice }
+    private enum Page { Media, Focus, Agent }
 
     // Pill sizes, matching the approved design preview.
     private static readonly (double W, double H, double R) IdleSize = (200, 46, 23);
@@ -25,12 +25,21 @@ public partial class MainWindow : Window
     // The Focus page is smaller than the media card: it only needs a ring and three lines of text.
     private static readonly (double W, double H, double R) FocusExpandedSize = (310, 116, 28);
 
-    private static (double W, double H, double R) SizeOf(IslandState state, Page page) => state switch
+    private static readonly (double W, double H, double R) AgentCompactSize = (260, 36, 18);
+    private static readonly (double W, double H, double R) AgentNoticeSize = (300, 40, 20);
+
+    private (double W, double H, double R) SizeOf(IslandState state, Page page) => state switch
     {
-        IslandState.Expanded => page == Page.Focus ? FocusExpandedSize : ExpandedSize,
+        IslandState.Expanded => page switch
+        {
+            Page.Focus => FocusExpandedSize,
+            Page.Agent => (290d, AgentCardHeight(), 24d),
+            _ => ExpandedSize
+        },
         IslandState.Compact => CompactSize,
         IslandState.FocusCompact => FocusCompactSize,
-        IslandState.Notice => NoticeSize,
+        IslandState.AgentCompact => AgentCompactSize,
+        IslandState.Notice => _noticeWide ? AgentNoticeSize : NoticeSize,
         _ => IdleSize
     };
 
@@ -74,6 +83,10 @@ public partial class MainWindow : Window
     private ClockSnapshot? _clockSnap;
     private Page _page = Page.Media;       // page the expanded card should show
     private Page _shownPage = Page.Media;  // page currently faded in
+    private Page? _userPage;               // page picked with the dots; forgotten when the card collapses
+    private bool _multiPage;               // more than one page available (the dots are visible)
+    private bool _noticeWide;              // the current pop-up is the wide (coding agent) one
+    private string _pagerKey = "";
 
     private IslandState _state = IslandState.Idle;
     private (double W, double H, double R) _size = IdleSize;   // size the pill is animating to
@@ -110,7 +123,11 @@ public partial class MainWindow : Window
             _hovering = false;
             ApplyState();
         };
-        _progressTimer.Tick += (_, _) => UpdateProgress();
+        _progressTimer.Tick += (_, _) =>
+        {
+            UpdateProgress();
+            UpdateAgentTimes();
+        };
         _popTimer.Tick += (_, _) =>
         {
             _popTimer.Stop();
@@ -128,10 +145,12 @@ public partial class MainWindow : Window
 
         _clock.Updated += (_, snapshot) => Dispatcher.InvokeAsync(() => OnClockUpdated(snapshot));
         SettingsService.Changed += ApplyClockSetting;
+        InitAgent();
 
         Loaded += async (_, _) =>
         {
             ApplyClockSetting();
+            ApplyAgentSetting();
 
             _media.Changed += (_, _) => Dispatcher.InvokeAsync(RefreshAsync);
             await _media.InitializeAsync();
@@ -197,21 +216,37 @@ public partial class MainWindow : Window
     {
         bool hasMedia = _current is not null;
         bool hasClock = _clockSnap is not null;
+        bool hasAgent = _agentSessions.Count > 0;
+        bool agentActive = _agentSessions.Any(s => s.State != AgentState.Idle);
 
-        // The expanded card shows one page; it is forced when only one source exists.
-        _page = !hasClock ? Page.Media : !hasMedia ? Page.Focus : _page;
+        // Pages that have something to show. The expanded card shows one; the dots switch between them.
+        var pages = new List<Page>();
+        if (hasAgent) pages.Add(Page.Agent);
+        if (hasMedia) pages.Add(Page.Media);
+        if (hasClock) pages.Add(Page.Focus);
+        _multiPage = pages.Count > 1;
+
+        // A working agent owns the collapsed pill, so it also owns the card unless the user picked another page.
+        _page = _userPage is Page chosen && pages.Contains(chosen) ? chosen
+            : agentActive ? Page.Agent
+            : hasMedia ? Page.Media
+            : hasClock ? Page.Focus
+            : Page.Agent;
         bool pageChanged = _page != _shownPage;
 
         var target = _notice ? IslandState.Notice
-            : (hasMedia || hasClock) && (_hovering || _popping) ? IslandState.Expanded
+            : pages.Count > 0 && (_hovering || _popping) ? IslandState.Expanded
+            : agentActive ? IslandState.AgentCompact
             : hasMedia ? IslandState.Compact
             : hasClock ? IslandState.FocusCompact
             : IslandState.Idle;
 
+        if (target != IslandState.Expanded && target != IslandState.Notice) _userPage = null;
+
         bool stateChanged = target != _state;
         var size = SizeOf(target, _page);
         bool sizeChanged = size != _size;
-        UpdatePager(target, hasMedia && hasClock);
+        UpdatePager(target, pages);
         if (!stateChanged && !pageChanged && !sizeChanged) return;
 
         if (stateChanged || sizeChanged)
@@ -235,11 +270,15 @@ public partial class MainWindow : Window
         _shownPage = _page;
         FadeView(CompactView, target == IslandState.Compact);
         FadeView(FocusCompactView, target == IslandState.FocusCompact);
+        FadeView(AgentCompactView, target == IslandState.AgentCompact);
         FadeView(ExpandedView, target == IslandState.Expanded && _page == Page.Media);
         FadeView(FocusPageView, target == IslandState.Expanded && _page == Page.Focus);
+        FadeView(AgentCardView, target == IslandState.Expanded && _page == Page.Agent);
         FadeView(NoticeView, target == IslandState.Notice);
 
         if (target == IslandState.Expanded) UpdateProgress();
+        if (target == IslandState.AgentCompact) UpdateAgentCompact(false);
+        if (target == IslandState.Expanded && _page == Page.Agent) UpdateAgentCard(false);
     }
 
     // ----- Microsoft Clock (Focus sessions and timers) -------------------
@@ -378,25 +417,42 @@ public partial class MainWindow : Window
     private static string FormatClock(TimeSpan t) =>
         t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes:00}:{t.Seconds:00}";
 
-    private void UpdatePager(IslandState target, bool bothSources)
+    // One dot per page that has content (agents, media, focus), shown only in the expanded card.
+    private void UpdatePager(IslandState target, List<Page> pages)
     {
-        Pager.Visibility = bothSources && target == IslandState.Expanded ? Visibility.Visible : Visibility.Collapsed;
-        PagerMediaDot.Fill = _page == Page.Media ? NormalBrush : PagerOff;
-        PagerFocusDot.Fill = _page == Page.Focus ? NormalBrush : PagerOff;
-    }
+        bool show = pages.Count > 1 && target == IslandState.Expanded;
+        Pager.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (!show) return;
 
-    private void PagerMedia_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        _page = Page.Media;
-        ApplyState();
-        e.Handled = true;
-    }
+        // Rebuild only when something changed, so a click is never lost to a re-created element.
+        string key = string.Join(",", pages) + "|" + _page;
+        if (key == _pagerKey) return;
+        _pagerKey = key;
 
-    private void PagerFocus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        _page = Page.Focus;
-        ApplyState();
-        e.Handled = true;
+        Pager.Children.Clear();
+        foreach (var page in pages)
+        {
+            var hit = new Border
+            {
+                Padding = new Thickness(5, 3, 5, 3),
+                Background = Brushes.Transparent,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = page.ToString(),
+                Child = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 6,
+                    Height = 6,
+                    Fill = page == _page ? NormalBrush : PagerOff
+                }
+            };
+            hit.MouseLeftButtonUp += (_, e) =>
+            {
+                _userPage = page;
+                ApplyState();
+                e.Handled = true;
+            };
+            Pager.Children.Add(hit);
+        }
     }
 
     private static void FadeView(UIElement view, bool show)
@@ -454,13 +510,26 @@ public partial class MainWindow : Window
         });
     }
 
-    private void ShowPowerNotice(bool pluggedIn, int percent)
+    private void ShowPowerNotice(bool pluggedIn, int percent) =>
+        ShowNotice(pluggedIn ? "Charging" : "Unplugged", $"{percent}%",
+                   pluggedIn ? ChargingGreen : NormalBrush,
+                   pluggedIn ? NoticeIcon.Bolt : NoticeIcon.Battery, wide: false);
+
+    private enum NoticeIcon { Bolt, Battery, Dot }
+
+    // The shared 3-second pop-up: used for power changes and for coding-agent events.
+    private void ShowNotice(string title, string right, Brush color, NoticeIcon icon, bool wide)
     {
-        NoticeBolt.Visibility = pluggedIn ? Visibility.Visible : Visibility.Collapsed;
-        NoticeBattery.Visibility = pluggedIn ? Visibility.Collapsed : Visibility.Visible;
-        NoticeTitle.Text = pluggedIn ? "Charging" : "Unplugged";
-        NoticeTitle.Foreground = pluggedIn ? ChargingGreen : NormalBrush;
-        NoticePercent.Text = $"{percent}%";
+        NoticeBolt.Visibility = icon == NoticeIcon.Bolt ? Visibility.Visible : Visibility.Collapsed;
+        NoticeBattery.Visibility = icon == NoticeIcon.Battery ? Visibility.Visible : Visibility.Collapsed;
+        NoticeDot.Visibility = icon == NoticeIcon.Dot ? Visibility.Visible : Visibility.Collapsed;
+        NoticeDot.Fill = color;
+        NoticeTitle.Text = title;
+        NoticeTitle.Foreground = color;
+        NoticePercent.Text = right;
+
+        _noticeWide = wide;
+        NoticeView.Width = wide ? AgentNoticeSize.W : NoticeSize.W;
 
         _notice = true;
         _noticeTimer.Stop();
@@ -472,7 +541,9 @@ public partial class MainWindow : Window
     {
         SystemEvents.PowerModeChanged -= OnPowerModeChanged; // static events: would otherwise keep the window alive
         SettingsService.Changed -= ApplyClockSetting;
+        SettingsService.Changed -= ApplyAgentSetting;
         _clock.Stop();
+        _agent.Stop();
         base.OnClosed(e);
     }
 

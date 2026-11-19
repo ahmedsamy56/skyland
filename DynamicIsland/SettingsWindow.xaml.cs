@@ -17,6 +17,8 @@ public partial class SettingsWindow : Window
         StartupToggle.IsChecked = StartupService.IsEnabled();
         AutoPopToggle.IsChecked = settings.AutoPopOnTrackChange;
         SyncClockToggle.IsChecked = settings.SyncMicrosoftClock;
+        AgentToggle.IsChecked = settings.ShowAgentStatus;
+        RefreshHookStatus();
         HoverOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Hover;
         ClickOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Click;
     }
@@ -36,6 +38,33 @@ public partial class SettingsWindow : Window
         SettingsService.Current.ExpandTrigger =
             ClickOption.IsChecked == true ? ExpandTrigger.Click : ExpandTrigger.Hover;
         SettingsService.Save();
+    }
+
+    private void AgentToggle_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsService.Current.ShowAgentStatus = AgentToggle.IsChecked == true;
+        SettingsService.Save();
+    }
+
+    // Connect / Disconnect edit ~/.claude/settings.json (our entries only, with a one-time backup).
+    private void HookButton_Click(object sender, RoutedEventArgs e)
+    {
+        string? error = ClaudeHookInstaller.IsConnected()
+            ? ClaudeHookInstaller.Disconnect()
+            : ClaudeHookInstaller.Connect();
+
+        RefreshHookStatus();
+        if (error is not null) HookStatusHint.Text = error;
+    }
+
+    private void RefreshHookStatus()
+    {
+        bool connected = ClaudeHookInstaller.IsConnected();
+        HookStatusTitle.Text = connected ? "Claude Code hooks: connected" : "Claude Code hooks: not connected";
+        HookStatusHint.Text = connected
+            ? "The island receives events from new Claude Code sessions. Disconnect removes only its own entries."
+            : "Adds the island's hooks to ~/.claude/settings.json (a backup is saved first). Applies to new Claude Code sessions.";
+        HookButton.Content = connected ? "Disconnect" : "Connect Claude Code";
     }
 
     private void SyncClockToggle_Click(object sender, RoutedEventArgs e)

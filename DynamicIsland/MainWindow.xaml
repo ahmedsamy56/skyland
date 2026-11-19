@@ -79,14 +79,17 @@
                               Data="M9.5,0.5 L2.5,9 H7.2 L6.2,15.5 L13.5,6.5 H8.8 Z" />
                         <Path x:Name="NoticeBattery" Stroke="White" StrokeThickness="1" Visibility="Collapsed"
                               Data="M1.5,4.5 H12.5 V11.5 H1.5 Z M12.5,6.5 H14.5 V9.5 H12.5" />
+                        <!-- Status dot for coding-agent pop-ups -->
+                        <Ellipse x:Name="NoticeDot" Width="10" Height="10" Fill="#FFB340" Visibility="Collapsed" />
                     </Grid>
 
                     <TextBlock x:Name="NoticeTitle" Grid.Column="1" Text="Charging" Foreground="#30D158"
-                               FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0" />
+                               FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0"
+                               TextTrimming="CharacterEllipsis" />
 
                     <TextBlock x:Name="NoticePercent" Grid.Column="2" Text="--" Foreground="White"
                                FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,18,0"
-                               Typography.NumeralAlignment="Tabular" />
+                               Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" MaxWidth="120" />
                 </Grid>
 
                 <!-- Focus compact: progress ring, countdown, title, session dots (mirrors Microsoft Clock) -->
@@ -249,19 +252,53 @@
                     </Grid>
                 </Grid>
 
-                <!-- Page dots: only when both media and a Clock session are active (expanded) -->
+                <!-- Coding agent compact: status dot, project + elapsed time (slides between sessions), dots, count -->
+                <Grid x:Name="AgentCompactView" Width="260" Height="36"
+                      HorizontalAlignment="Center" VerticalAlignment="Top"
+                      Opacity="0" IsHitTestVisible="False">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Column="0" Width="14" Height="14" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <Ellipse x:Name="AgentOrbPing" Stroke="#A78BFA" StrokeThickness="2" Opacity="0"
+                                 RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <ScaleTransform x:Name="AgentOrbScale" ScaleX="0.5" ScaleY="0.5" />
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse x:Name="AgentOrbCore" Width="8" Height="8" Fill="#A78BFA" />
+                    </Grid>
+
+                    <Grid x:Name="AgentCompactSlot" Grid.Column="1" Margin="9,0,6,0" ClipToBounds="True" />
+
+                    <StackPanel x:Name="AgentPips" Grid.Column="2" Orientation="Horizontal"
+                                VerticalAlignment="Center" Margin="0,0,6,0" />
+
+                    <Border x:Name="AgentBadge" Grid.Column="3" Background="#26262C" CornerRadius="9"
+                            Padding="7,2" Margin="0,0,12,0" VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock x:Name="AgentBadgeText" Foreground="#DDDDDD" FontSize="10.5" FontWeight="Bold" />
+                    </Border>
+                </Grid>
+
+                <!-- Coding agent card (expanded): one session at a time, switching with a slide -->
+                <Grid x:Name="AgentCardView" Width="290" Height="78"
+                      HorizontalAlignment="Center" VerticalAlignment="Top"
+                      Opacity="0" IsHitTestVisible="False">
+                    <StackPanel x:Name="AgentCardContent" Margin="14,8,14,0">
+                        <Grid x:Name="AgentCardSlot" Height="44" ClipToBounds="True" />
+                        <StackPanel x:Name="AgentDots" Orientation="Horizontal" HorizontalAlignment="Center"
+                                    Height="12" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Page dots: shown in the expanded card when more than one source (media / focus / agents) is active -->
                 <StackPanel x:Name="Pager" Orientation="Horizontal"
                             HorizontalAlignment="Center" VerticalAlignment="Top"
-                            Margin="0,4,0,0" Visibility="Collapsed">
-                    <Border Padding="5,3" Cursor="Hand" Background="Transparent"
-                            MouseLeftButtonUp="PagerMedia_Click" ToolTip="Media">
-                        <Ellipse x:Name="PagerMediaDot" Width="6" Height="6" Fill="White" />
-                    </Border>
-                    <Border Padding="5,3" Cursor="Hand" Background="Transparent"
-                            MouseLeftButtonUp="PagerFocus_Click" ToolTip="Focus">
-                        <Ellipse x:Name="PagerFocusDot" Width="6" Height="6" Fill="#46464F" />
-                    </Border>
-                </StackPanel>
+                            Margin="0,4,0,0" Visibility="Collapsed" />
 
             </Grid>
         </Border>

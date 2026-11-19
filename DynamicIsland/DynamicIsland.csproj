@@ -12,6 +12,25 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
+  <!-- The Claude Code hook tool ships in a "hook" folder next to the island. Build it with the island
+       and copy it on build and on publish. It is built without the island's runtime identifier. -->
+  <ItemGroup>
+    <ProjectReference Include="..\DynamicIsland.Hook\DynamicIsland.Hook.csproj"
+                      ReferenceOutputAssembly="false"
+                      GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishSingleFile" />
+  </ItemGroup>
+
+  <Target Name="CopyHookTool" AfterTargets="Build;Publish">
+    <ItemGroup>
+      <HookFile Include="..\DynamicIsland.Hook\bin\$(Configuration)\net8.0\island-hook.*" />
+    </ItemGroup>
+    <PropertyGroup>
+      <HookTarget Condition="'$(PublishDir)' != '' and '$(_IsPublishing)' == 'true'">$(PublishDir)hook</HookTarget>
+      <HookTarget Condition="'$(HookTarget)' == ''">$(OutDir)hook</HookTarget>
+    </PropertyGroup>
+    <Copy SourceFiles="@(HookFile)" DestinationFolder="$(HookTarget)" />
+  </Target>
+
   <ItemGroup>
     <!-- GPU load comes from the Windows "GPU Engine" performance counters. -->
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.1" />

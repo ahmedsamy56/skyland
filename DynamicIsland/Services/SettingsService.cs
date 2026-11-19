@@ -21,6 +21,9 @@ public sealed class AppSettings
     /// <summary>Mirror Focus sessions and timers from the Windows Clock app.</summary>
     public bool SyncMicrosoftClock { get; set; } = true;
 
+    /// <summary>Show Claude Code sessions (needs the hooks from Settings > Connect Claude Code).</summary>
+    public bool ShowAgentStatus { get; set; } = true;
+
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public ExpandTrigger ExpandTrigger { get; set; } = ExpandTrigger.Hover;
 }

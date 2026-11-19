@@ -4,6 +4,7 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="DynamicIsland.Hook/DynamicIsland.Hook.csproj" />
   <Project Path="DynamicIsland/DynamicIsland.csproj" />
   <Project Path="NEXUS/NEXUS.csproj">
     <Platform Solution="*|ARM64" Project="ARM64" />
