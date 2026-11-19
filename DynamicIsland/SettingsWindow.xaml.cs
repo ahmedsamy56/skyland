@@ -16,6 +16,7 @@ public partial class SettingsWindow : Window
         var settings = SettingsService.Current;
         StartupToggle.IsChecked = StartupService.IsEnabled();
         AutoPopToggle.IsChecked = settings.AutoPopOnTrackChange;
+        SyncClockToggle.IsChecked = settings.SyncMicrosoftClock;
         HoverOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Hover;
         ClickOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Click;
     }
@@ -34,6 +35,12 @@ public partial class SettingsWindow : Window
     {
         SettingsService.Current.ExpandTrigger =
             ClickOption.IsChecked == true ? ExpandTrigger.Click : ExpandTrigger.Hover;
+        SettingsService.Save();
+    }
+
+    private void SyncClockToggle_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsService.Current.SyncMicrosoftClock = SyncClockToggle.IsChecked == true;
         SettingsService.Save();
     }
 

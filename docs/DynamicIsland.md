@@ -19,6 +19,24 @@ A Windows 11 "dynamic island": a black pill pinned to the top-centre of the prim
 - The window is non-activating (never takes focus), hidden from the taskbar and Alt+Tab, and always on top.
 - The window is sized for the expanded pill; the area around the pill is fully transparent, so clicks pass through to apps underneath.
 
+## Microsoft Clock sync (Focus sessions and timers)
+The island mirrors the Windows Clock app, read-only: you start, pause and stop sessions in Clock, the island shows them.
+
+- **Compact (no media playing):** 250 x 36 pill with a progress ring, countdown, title and session dots (filled = done, outlined = current). Orange = focus, green = break, blue = timer.
+- **Expanded:** a compact 310 x 116 Focus page (the media card stays 400 x 132; the island resizes when you switch pages) with a large glowing progress ring holding the countdown, a colored phase chip (FOCUS / BREAK / TIMER), the title ("Session 1 of 3", or the timer name), a subtitle ("Up next: 5 min break", "Ends at 10:44 AM", or "Paused in Clock"), and wide session bars (solid = done, dimmed = current). Amber subtitle text means the values are frozen (Clock minimized or on another page). When media is also playing, two page dots at the top of the card switch between Media and Focus.
+- **Media wins the compact pill** when both are active; the Focus page is one click away in the expanded card.
+- Toggle: Settings > Integrations > Sync Microsoft Clock (on by default). Off = Clock is never touched.
+
+**How it works and its limits.** Clock has no public API, so `Services/ClockSyncService.cs` reads Clock's on-screen text through UI Automation once a second on a background thread. Verified by probing:
+- Needs no admin rights or Windows permission.
+- Works while the Clock window is open on the **Focus sessions** or **Timer** page.
+- **Minimized: Windows exposes no UI elements at all.** The island then freezes the last values, dims them and shows "Clock minimized". It never guesses.
+- If Clock is open on another page (Alarm, Stopwatch, World clock), the island shows the frozen values and "Open Focus in Clock".
+- English UI only: the parser reads strings such as `14 minutes 49 seconds, Remaining Of, 15 minutes 0 seconds`. A Clock update or another language can break it; the symptom is the Clock pill never appearing.
+- Elements used (UI Automation ids): `FocusButton`, `TimerButton`, `TickTimer`, `TitleTextBlock`, `FocusSessionPlayPauseButton`, `UpcomingBlock`, `TimerViewGrid`, `TimerValueText`, `TimerNameText`, `TimerPlayPauseButton`. Only the countdown, phase and play/pause state are read, never the task list.
+- If several timers run, the one that finishes first is shown.
+- Not implemented: controlling Clock from the island, and a phase-end pop-up.
+
 ## Power pop-up
 When the charger is connected the island flashes a 230 x 40 pill for 3 s: green bolt, green "Charging", and the battery percentage. Unplugging shows a neutral "Unplugged" with a battery outline and the percentage. Afterwards the island returns to whatever it was showing (stats or media).
 
@@ -51,6 +69,7 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | General | Start with Windows | off | Adds/removes the Run registry value |
 | Island | Expand when you: Hover / Click | Hover | Hover expands on mouse enter; Click expands on click of the compact pill. Both collapse 250 ms after the mouse leaves |
 | Island | Pop up on track change | off | Expands for 3 s when the track changes (not on app start, pause or resume) |
+| Integrations | Sync Microsoft Clock | on | Mirrors Clock's Focus sessions and timers (see above) |
 
 **Adding a setting later:** add a property to `AppSettings`, add a row to a section in `SettingsWindow.xaml` (use the `Card`, `RowTitle`, `RowHint`, `ToggleSwitch` styles), save in its `Click` handler, and read `SettingsService.Current` where the feature runs. For a new group, add a `SectionLabel` plus a `Card`.
 
@@ -60,6 +79,7 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | `App.xaml(.cs)` | Startup, single-instance mutex, tray lifetime, shared `IconButton` style |
 | `Services/TrayService.cs` | Tray icon (drawn in code, WinForms `NotifyIcon`): double-click or "Settings..." opens Settings, "Exit" quits |
 | `Services/StartupService.cs` | Autostart via `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (no admin needed). The registry is the source of truth, not the settings file |
+| `Services/ClockSyncService.cs` | Reads Microsoft Clock's Focus session and timers via UI Automation (read-only) |
 | `Services/SystemStatsService.cs` | CPU / RAM / GPU / battery sampling for the idle pill |
 | `Services/SettingsService.cs` | `AppSettings` stored as JSON in `%AppData%\DynamicIsland\settings.json`; `SettingsService.Current` is read live by the island |
 | `SettingsWindow.xaml(.cs)` | Dark single-page settings window with sections. Toggle and segmented-button styles live in `App.xaml` |

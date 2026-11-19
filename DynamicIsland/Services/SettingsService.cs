@@ -18,6 +18,9 @@ public sealed class AppSettings
 {
     public bool AutoPopOnTrackChange { get; set; } = false;
 
+    /// <summary>Mirror Focus sessions and timers from the Windows Clock app.</summary>
+    public bool SyncMicrosoftClock { get; set; } = true;
+
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public ExpandTrigger ExpandTrigger { get; set; } = ExpandTrigger.Hover;
 }
@@ -46,6 +49,9 @@ public static class SettingsService
         return new AppSettings();
     }
 
+    /// <summary>Raised after every Save, on the calling (UI) thread.</summary>
+    public static event Action? Changed;
+
     public static void Save()
     {
         try
@@ -57,5 +63,7 @@ public static class SettingsService
         {
             // Settings are a convenience; never crash the island over a failed save.
         }
+
+        Changed?.Invoke();
     }
 }

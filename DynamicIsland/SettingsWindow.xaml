@@ -99,6 +99,24 @@
                 </StackPanel>
             </Border>
 
+            <!-- INTEGRATIONS -->
+            <TextBlock Text="INTEGRATIONS" Style="{StaticResource SectionLabel}" />
+            <Border Style="{StaticResource Card}">
+                <Grid Margin="16,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="Sync Microsoft Clock" Style="{StaticResource RowTitle}" />
+                        <TextBlock Text="Show Focus sessions and timers from the Windows Clock app. Clock must be open on screen, not minimized. Only the countdown is read, never your tasks." Style="{StaticResource RowHint}" />
+                    </StackPanel>
+                    <ToggleButton x:Name="SyncClockToggle" Grid.Column="1"
+                                  Style="{StaticResource ToggleSwitch}" Click="SyncClockToggle_Click"
+                                  AutomationProperties.Name="Sync Microsoft Clock" />
+                </Grid>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </Window>
