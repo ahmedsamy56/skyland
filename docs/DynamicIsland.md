@@ -22,6 +22,10 @@ A Windows 11 "dynamic island": a black pill pinned to the top-centre of the prim
 ## Coding agent status (Claude Code)
 The island shows your Claude Code sessions: what each is doing, how long the current turn has run, and when one needs you. Read-only: you still answer in the terminal.
 
+**Idle sessions stay visible:** while a Claude Code session is open but not working, the pill shows it with a gray dot, the project name and "idle" instead of the PC stats (media and Focus still take priority over an idle session). The PC stats return when no session is open.
+
+**Session name:** the project folder (`CLAUDE_PROJECT_DIR`), not the hook's `cwd`, because `cwd` changes with every `cd` the agent runs.
+
 **Collapsed pill (260 x 36)** while any session works: one status dot (violet = working, amber = needs you), project name, elapsed time, and a count badge when more than one is active. With several working sessions the pill slides vertically to the next every 3 s; small dots show which. The agent takes the pill over media and Focus while it works.
 
 **Card (290 px wide)**, shown on hover on the Agents page: one session at a time (ring avatar with the project's first letter, project, current action, duration), sliding between sessions every 3 s with a row of clickable dots underneath. Ring: spinning arc = working, breathing full ring = needs you, empty = idle. Idle-only sessions still show in the card. A session that needs you is pinned: only waiting sessions are shown until you answer.
@@ -39,6 +43,7 @@ Claude Code hook event --> island-hook.exe --> named pipe "DynamicIsland.Agent" 
 - Hook events used: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse` (what it is doing), `PostToolUse` (detects that a permission prompt was answered), `Notification` (permission prompts only; the "waiting for input" prompt after a finished turn is ignored), `Stop` (turn finished).
 - **Connect:** Settings > Integrations > Claude Code hooks > **Connect Claude Code**. This edits `~/.claude/settings.json`: it adds the seven entries (identified by `island-hook` in the command), keeps everything else, and saves a one-time backup as `settings.json.island-backup`. **Disconnect** removes only those entries. Invalid JSON is never touched. Comments in the file are not preserved when it is rewritten. It applies to **new** Claude Code sessions.
 - Toggle: Settings > Integrations > Claude Code status (on by default).
+- **Diagnosing "nothing shows":** Settings > Claude Code hooks shows "Last event received N s ago". "No events received" means no Claude Code session has reached the island: hooks are read when a session starts, so start a new one after clicking Connect. The island keeps sessions in memory, so after restarting the island a session reappears on its next event.
 
 ### Limits
 - An interrupted turn (Esc) sends no `Stop` event, so a session silent for 10 minutes while "working" is treated as idle; idle sessions are forgotten after 1 hour.

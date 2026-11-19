@@ -26,6 +26,9 @@ public sealed class AgentService
 {
     public const string PipeName = "DynamicIsland.Agent";
 
+    /// <summary>When the last hook event arrived (null: none since the island started). Shown in Settings to help diagnose.</summary>
+    public static DateTime? LastEventUtc { get; private set; }
+
     // An interrupted turn (Esc) sends no Stop event, so a silent "working" session is eventually
     // treated as idle, and finished sessions are forgotten after a while.
     private static readonly TimeSpan StaleWorking = TimeSpan.FromMinutes(10);
@@ -141,6 +144,7 @@ public sealed class AgentService
         if (id.Length == 0) return;
 
         string cwd = Str(msg, "cwd");
+        string project = Str(msg, "project");
         string tool = Str(msg, "tool");
         string detail = Str(msg, "detail");
         string message = Str(msg, "message");
@@ -164,7 +168,12 @@ public sealed class AgentService
             }
 
             s.LastEvent = now;
-            if (cwd.Length > 0) s.Project = Leaf(cwd);
+            LastEventUtc = now;
+
+            // Name the session after the stable project folder. cwd changes with every `cd`, so it is only
+            // a fallback for the first event of a session, and is never allowed to rename it later.
+            if (project.Length > 0) s.Project = Leaf(project);
+            else if (s.Project == "session" && cwd.Length > 0) s.Project = Leaf(cwd);
 
             switch (ev)
             {

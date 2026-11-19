@@ -239,6 +239,7 @@ public partial class MainWindow : Window
             : agentActive ? IslandState.AgentCompact
             : hasMedia ? IslandState.Compact
             : hasClock ? IslandState.FocusCompact
+            : hasAgent ? IslandState.AgentCompact   // open but idle sessions replace the PC stats
             : IslandState.Idle;
 
         if (target != IslandState.Expanded && target != IslandState.Notice) _userPage = null;

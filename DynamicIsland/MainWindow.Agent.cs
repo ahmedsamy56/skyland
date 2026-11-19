@@ -117,12 +117,17 @@ public partial class MainWindow
             .OrderBy(s => s.TurnStart ?? DateTime.MaxValue)
             .ThenBy(s => s.Id);
 
-        if (collapsed) return working.ToList();
-
         var idle = _agentSessions
             .Where(s => s.State == AgentState.Idle)
             .OrderBy(s => s.Project)
             .ThenBy(s => s.Id);
+
+        // The pill shows working sessions; when none work, it shows the idle ones instead of the PC stats.
+        if (collapsed)
+        {
+            var w = working.ToList();
+            return w.Count > 0 ? w : idle.Take(4).ToList();
+        }
 
         return working.Concat(idle).Take(4).ToList();
     }
@@ -163,9 +168,11 @@ public partial class MainWindow
 
         SetAgentOrb(s.State);
 
+        // Badge: how many sessions are active, or how many are open when all are idle.
         int active = _agentSessions.Count(x => x.State != AgentState.Idle);
-        AgentBadge.Visibility = active > 1 ? Visibility.Visible : Visibility.Collapsed;
-        AgentBadgeText.Text = active.ToString();
+        int shown = active > 0 ? active : _agentSessions.Count;
+        AgentBadge.Visibility = shown > 1 ? Visibility.Visible : Visibility.Collapsed;
+        AgentBadgeText.Text = shown.ToString();
 
         AgentPips.Children.Clear();
         if (cands.Count > 1)
@@ -186,7 +193,7 @@ public partial class MainWindow
         var current = AgentCompactSlot.Children.OfType<AgentRow>().LastOrDefault();
         if (current is not null && current.Key == key)
         {
-            if (current.Time is not null) current.Time.Text = Elapsed(s);
+            if (current.Time is not null) current.Time.Text = CompactTime(s);
             return;
         }
 
@@ -210,7 +217,7 @@ public partial class MainWindow
             TextTrimming = TextTrimming.CharacterEllipsis
         };
 
-        row.Time = TimeText(Elapsed(s), 12, Thickness_Left(8));
+        row.Time = TimeText(CompactTime(s), 12, Thickness_Left(8));
         Grid.SetColumn(row.Time, 1);
 
         row.Children.Add(name);
@@ -472,19 +479,22 @@ public partial class MainWindow
         if (_agentSessions.Count == 0) return;
 
         if (_state == IslandState.AgentCompact)
-            RefreshTime(AgentCompactSlot, Candidates(true));
+            RefreshTime(AgentCompactSlot, Candidates(true), CompactTime);
         else if (_state == IslandState.Expanded && _page == Page.Agent)
-            RefreshTime(AgentCardSlot, Candidates(false));
+            RefreshTime(AgentCardSlot, Candidates(false), Elapsed);
     }
 
-    private static void RefreshTime(Grid slot, List<AgentSessionInfo> candidates)
+    private static void RefreshTime(Grid slot, List<AgentSessionInfo> candidates, Func<AgentSessionInfo, string> format)
     {
         var row = slot.Children.OfType<AgentRow>().LastOrDefault();
         if (row?.Time is null) return;
 
         var session = candidates.FirstOrDefault(c => c.Id == row.SessionId);
-        if (session is not null) row.Time.Text = Elapsed(session);
+        if (session is not null) row.Time.Text = format(session);
     }
+
+    // Collapsed pill: the turn timer while working, a dim "idle" otherwise.
+    private static string CompactTime(AgentSessionInfo s) => s.State == AgentState.Idle ? "idle" : Elapsed(s);
 
     private static string Elapsed(AgentSessionInfo s) =>
         s.State != AgentState.Idle && s.TurnStart is { } start

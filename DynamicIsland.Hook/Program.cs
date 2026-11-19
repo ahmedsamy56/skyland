@@ -24,6 +24,8 @@ try
         ["event"] = Str(root, "hook_event_name"),
         ["session"] = Str(root, "session_id"),
         ["cwd"] = Str(root, "cwd"),
+        // cwd follows every `cd` the agent runs; the project folder stays put, so it names the session.
+        ["project"] = Environment.GetEnvironmentVariable("CLAUDE_PROJECT_DIR") ?? "",
         ["tool"] = tool,
         ["detail"] = Detail(tool, root["tool_input"] as JsonObject),
         ["message"] = Trim(Str(root, "message"), 200),

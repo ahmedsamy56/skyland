@@ -57,12 +57,25 @@ public partial class SettingsWindow : Window
         if (error is not null) HookStatusHint.Text = error;
     }
 
+    // Tells the user whether Claude Code is actually reaching the island.
+    private static string LastEventText()
+    {
+        if (AgentService.LastEventUtc is not { } last)
+            return "No events received since the island started. Start a new Claude Code session and send a message.";
+
+        var ago = DateTime.UtcNow - last;
+        string when = ago.TotalSeconds < 60 ? $"{(int)ago.TotalSeconds} s ago"
+            : ago.TotalMinutes < 60 ? $"{(int)ago.TotalMinutes} min ago"
+            : $"{(int)ago.TotalHours} h ago";
+        return $"Last event received {when}.";
+    }
+
     private void RefreshHookStatus()
     {
         bool connected = ClaudeHookInstaller.IsConnected();
         HookStatusTitle.Text = connected ? "Claude Code hooks: connected" : "Claude Code hooks: not connected";
         HookStatusHint.Text = connected
-            ? "The island receives events from new Claude Code sessions. Disconnect removes only its own entries."
+            ? "Disconnect removes only the island's own entries. " + LastEventText()
             : "Adds the island's hooks to ~/.claude/settings.json (a backup is saved first). Applies to new Claude Code sessions.";
         HookButton.Content = connected ? "Disconnect" : "Connect Claude Code";
     }
