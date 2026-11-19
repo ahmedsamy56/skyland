@@ -1,0 +1,87 @@
+<p align="center">
+  <img src="DynamicIsland/Assets/skyland-icon.svg" width="120" alt="SkyLand icon">
+</p>
+
+<h1 align="center">SkyLand</h1>
+
+<p align="center">
+  A Dynamic Island for Windows 11, by SkyZack.<br>
+  A small black pill at the top of your screen that shows what is going on, and gets out of the way when it is not.
+</p>
+
+<p align="center">
+  <a href="https://github.com/cbsajan/skyland/releases/latest"><b>Download the latest release</b></a>
+</p>
+
+---
+
+## What it shows
+
+| | |
+|---|---|
+| **Media** | Title, artist and artwork of whatever is playing (Spotify, browsers, any player in the Windows media flyout), with play, pause, next and previous. |
+| **PC stats** | CPU, memory, GPU and battery at a glance when nothing else is happening. |
+| **Charging** | A short pop-up when you plug in or unplug the charger. |
+| **Focus and timers** | Your [Microsoft Clock](https://apps.microsoft.com/detail/9wzdncrfj3pr) Focus sessions and timers, with a progress ring and session dots. |
+| **Claude Code** | Which [Claude Code](https://claude.com/claude-code) sessions are working, for how long, and an alert the moment one needs you. |
+
+Hover the pill (or click it, your choice in Settings) to expand it. **Drag it anywhere** on screen, for example below your browser tabs; it remembers the spot and snaps back to the top centre when you get close.
+
+## Install
+
+1. Download `SkyLand-x.y.z.msi` from the [latest release](https://github.com/cbsajan/skyland/releases/latest) and run it.
+2. SkyLand starts when it finishes and turns on **Start with Windows** (switch it off in Settings).
+
+It installs for the current user only, so there is **no admin prompt**. SkyLand then looks for updates on its own: when a new version is out you get a prompt in the island with **Install** and **Later**.
+
+> **Unsigned for now.** Windows SmartScreen may say "unknown publisher" the first time. Choose *More info*, then *Run anyway*. Each release has a `.sha256` file so you can check your download, and the in-app updater refuses any installer whose hash does not match.
+
+**Requirements:** Windows 11 (64-bit). The installer is self-contained, so you do not need to install .NET.
+
+## Use it
+
+- **Tray icon:** double-click for Settings; right-click for *Settings*, *Reset position* and *Exit*.
+- **Settings** has switches for the expand trigger (hover or click), pop-up on track change, Microsoft Clock sync, Claude Code status, automatic updates, and a *Reset position* button.
+
+### Claude Code
+
+Open **Settings > Integrations > Connect Claude Code** once. It adds a few hook entries to `~/.claude/settings.json` (a backup is saved first, and *Disconnect* removes only its own entries), then new Claude Code sessions show up in the island. Only the event type, project folder, tool name and a short hint are sent, over a pipe private to your Windows user. Prompts and file contents never leave Claude Code. It is read-only: you still answer in the terminal.
+
+### Microsoft Clock
+
+Clock has no public API, so SkyLand reads its on-screen countdown through Windows UI Automation. That works while the Clock window is **open and not minimized** on the Focus or Timer page; when it is minimized Windows hides its content, so SkyLand shows the last values and says so. English Windows only.
+
+## Build from source
+
+You need the [.NET SDK](https://dotnet.microsoft.com/download) (8 or newer) on Windows.
+
+```
+git clone https://github.com/cbsajan/skyland.git
+cd skyland
+dotnet run --project DynamicIsland
+```
+
+To build the installer you also need [WiX Toolset 5](https://wixtoolset.org/) (`dotnet tool install --global wix --version 5.0.2`, then `wix extension add -g WixToolset.Util.wixext/5.0.2`):
+
+```
+cd Installer
+.\build-installer.ps1        # creates dist\SkyLand-<version>.msi and its .sha256
+```
+
+## Project layout
+
+```
+DynamicIsland/        the app (WPF, .NET 8)   - code namespaces keep the old name on purpose
+DynamicIsland.Hook/   island-hook.exe, the small program Claude Code runs on each event
+Installer/            WiX package and the build script
+docs/SkyLand.md       full documentation: behaviour, design decisions, limits, release process
+NEXUS/                an unused WinUI 3 template project, kept for reference
+```
+
+## Credits
+
+SkyLand is made by **SkyZack**.
+
+## License
+
+No license has been chosen yet, which means all rights are reserved. If you want to use or contribute to the code, please open an issue first.
