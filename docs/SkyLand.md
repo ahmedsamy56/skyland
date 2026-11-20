@@ -184,6 +184,8 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 **Adding a setting later:** add a property to `AppSettings`, add a row to a section in `SettingsWindow.xaml` (use the `Card`, `RowTitle`, `RowHint`, `ToggleSwitch` styles), save in its `Click` handler, and read `SettingsService.Current` where the feature runs. For a new group, add a `SectionLabel` plus a `Card`.
 
 ## Code map
+Contributors: see [CONTRIBUTING.md](../CONTRIBUTING.md) for the workflow, the test seams and the privacy rules.
+
 | File | Role |
 |------|------|
 | `App.xaml(.cs)` | Startup, single-instance mutex, tray lifetime, shared `IconButton` style |

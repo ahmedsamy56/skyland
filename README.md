@@ -136,4 +136,4 @@ SkyLand is licensed under the [Apache License 2.0](LICENSE): you may use, modify
 
 The license covers the source code. It does not give you the right to use the **SkyLand** or **SkyZack** names or logos to promote your own product, so if you fork it, please rename it and use your own icon.
 
-Contributions are welcome; by sending one you agree that it is licensed under the same terms.
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) for how to build, test and send a change. By sending one you agree that it is licensed under the same terms.
