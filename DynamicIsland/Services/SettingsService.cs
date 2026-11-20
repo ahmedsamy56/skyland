@@ -10,6 +10,14 @@ public enum ExpandTrigger
     Click
 }
 
+/// <summary>Which screen edge the minimized round icon docks to.</summary>
+public enum DockSide
+{
+    Auto,    // the edge nearest to the island at first, then wherever you drop it
+    Left,
+    Right
+}
+
 /// <summary>What the optional performance bubble on the left of the island shows.</summary>
 public enum PerfBubbleMode
 {
@@ -36,6 +44,17 @@ public sealed class AppSettings
     public double? IslandLeft { get; set; }
     public double? IslandTop { get; set; }
 
+    /// <summary>Which edge the round icon of the minimized island docks to. Auto = nearest edge, then wherever you drop it.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public DockSide MinimizedSide { get; set; } = DockSide.Auto;
+
+    /// <summary>The island is minimized into the round icon on a screen edge.</summary>
+    public bool Minimized { get; set; }
+
+    /// <summary>Where the round icon sits (window position in DIPs); null = the edge nearest to the island.</summary>
+    public double? DockLeft { get; set; }
+    public double? DockTop { get; set; }
+
     /// <summary>Look for a newer SkyLand on start and about once a day, and offer it in the island.</summary>
     public bool AutoCheckUpdates { get; set; } = true;
 
@@ -56,6 +75,9 @@ public sealed class AppSettings
 
     /// <summary>Pop-up and a green / orange dot when an app starts using the camera or the microphone.</summary>
     public bool ShowPrivacyIndicator { get; set; } = true;
+
+    /// <summary>Short pop-ups when a Bluetooth device connects or disconnects, or a USB drive or device is plugged in or removed.</summary>
+    public bool ShowDeviceEvents { get; set; } = true;
 
     /// <summary>A short alert under the island when the CPU, memory or GPU is heavily loaded or the battery is low.</summary>
     public bool ShowLoadAlerts { get; set; } = true;
@@ -90,6 +112,8 @@ public static class SettingsService
     {
         Current.IslandLeft = null;
         Current.IslandTop = null;
+        Current.DockLeft = null;
+        Current.DockTop = null;
         Save();
     }
 

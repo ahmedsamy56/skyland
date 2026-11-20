@@ -37,7 +37,10 @@ public partial class MainWindow
     private (bool Cam, bool Mic) _privacyShowing;   // what the pop-up on screen announces
     private bool _camPending, _micPending;          // announced by a pop-up that has not ended yet: its dot waits
     private bool _camDotOn, _micDotOn, _privacyStripOn, _dotsVisibleState = true;
-    private readonly Queue<(bool Cam, bool Mic, string Apps)> _privacyQueue = new();
+    // One entry per pop-up waiting for its turn: microphone / camera in use, or a Bluetooth / USB device event.
+    // Cam / Mic mark the privacy ones: they hold back their dot until the pop-up ends.
+    private sealed record PopupItem(Geometry Icon, Brush Accent, string Title, string Sub, string Trail, bool Live, bool Cam = false, bool Mic = false, bool FillIcon = false);
+    private readonly Queue<PopupItem> _privacyQueue = new();
 
     private void InitPrivacy()
     {
@@ -111,7 +114,9 @@ public partial class MainWindow
 
             _camPending |= newCam;
             _micPending |= newMic;
-            _privacyQueue.Enqueue((newCam, newMic, who));
+            bool micOnly = newMic && !newCam;
+            _privacyQueue.Enqueue(new PopupItem(micOnly ? MicIcon : CameraIcon, micOnly ? MicOrange : CamGreen,
+                "", who.Length > 0 ? who : "An app", "LIVE", Live: true, Cam: newCam, Mic: newMic));
             if (!_privacyPopup) ShowNextPrivacyPopup();
             else ApplyState();   // the dots must wait for their pop-up
             return;
@@ -124,21 +129,40 @@ public partial class MainWindow
     {
         while (_privacyQueue.Count > 0)
         {
-            var (cam, mic, apps) = _privacyQueue.Dequeue();
-            cam &= _usage.CameraActive;   // it may have stopped while waiting
-            mic &= _usage.MicActive;
-            if (!cam && !mic) continue;
+            var item = _privacyQueue.Dequeue();
+            string title = item.Title;
+            Geometry icon = item.Icon;
+            Brush accent = item.Accent;
 
-            _privacyShowing = (cam, mic);
-            bool micOnly = mic && !cam;
-            var accent = micOnly ? MicOrange : CamGreen;
+            if (item.Cam || item.Mic)
+            {
+                bool cam = item.Cam && _usage.CameraActive;   // it may have stopped while waiting
+                bool mic = item.Mic && _usage.MicActive;
+                if (!cam && !mic) continue;
 
-            PrivacyIcon.Data = micOnly ? MicIcon : CameraIcon;
+                _privacyShowing = (cam, mic);
+                bool micOnly = mic && !cam;
+                icon = micOnly ? MicIcon : CameraIcon;
+                accent = micOnly ? MicOrange : CamGreen;
+                title = cam && mic ? "Camera and microphone" : cam ? "Camera in use" : "Microphone in use";
+            }
+            else
+            {
+                _privacyShowing = (false, false);
+            }
+
+            PrivacyIcon.Data = icon;
             PrivacyIcon.Stroke = accent;
+            PrivacyIcon.Fill = item.FillIcon ? accent : null;   // the charging bolt is solid, the other icons are outlines
+            PrivacyTitle.Text = title;
+            PrivacySub.Text = item.Sub;
+
+            // "LIVE" with a pulsing dot for microphone / camera; a plain value (battery level, drive size) for devices.
+            PrivacyLiveDot.Visibility = item.Live ? Visibility.Visible : Visibility.Collapsed;
             PrivacyLiveDot.Fill = accent;
-            PrivacyLive.Foreground = accent;
-            PrivacyTitle.Text = cam && mic ? "Camera and microphone" : cam ? "Camera in use" : "Microphone in use";
-            PrivacySub.Text = apps.Length > 0 ? apps : "An app";
+            PrivacyLive.Text = item.Trail;
+            PrivacyLive.Foreground = item.Live ? accent : NormalBrush;
+            PrivacyLive.Margin = new Thickness(item.Live ? 6 : 0, 0, 0, 0);
 
             _privacyPopup = true;
             _privacyPopupTimer.Stop();

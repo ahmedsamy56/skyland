@@ -122,6 +122,29 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Minimized icon" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="Where the round icon goes when you minimize the island with the minus button on a card. Automatic uses the edge nearest to the island, then wherever you drop it." Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Background="#26262C" CornerRadius="10" Padding="3" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="DockAutoOption" GroupName="DockSide" Content="Automatic"
+                                             Style="{StaticResource SegmentButton}" Click="DockOption_Click" />
+                                <RadioButton x:Name="DockLeftOption" GroupName="DockSide" Content="Left"
+                                             Style="{StaticResource SegmentButton}" Click="DockOption_Click" />
+                                <RadioButton x:Name="DockRightOption" GroupName="DockSide" Content="Right"
+                                             Style="{StaticResource SegmentButton}" Click="DockOption_Click" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Height="1" Background="#2A2A31" />
+
+                    <Grid Margin="16,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,16,0">
                             <TextBlock Text="Performance ring" Style="{StaticResource RowTitle}" />
                             <TextBlock Text="A small ring bubble on the left of the island. Rings shows CPU, memory, GPU and battery as four concentric rings; CPU shows one ring with the percentage." Style="{StaticResource RowHint}" />
                         </StackPanel>
@@ -135,6 +158,22 @@
                                              Style="{StaticResource SegmentButton}" Click="PerfOption_Click" />
                             </StackPanel>
                         </Border>
+                    </Grid>
+
+                    <Border Height="1" Background="#2A2A31" />
+
+                    <Grid Margin="16,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Bluetooth and USB pop-ups" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="Show a short pop-up when a Bluetooth device connects or disconnects (with its battery level when Windows reports one), or a USB drive or device is plugged in or removed." Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <ToggleButton x:Name="DeviceToggle" Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}" Click="DeviceToggle_Click"
+                                      AutomationProperties.Name="Bluetooth and USB pop-ups" />
                     </Grid>
 
                     <Border Height="1" Background="#2A2A31" />

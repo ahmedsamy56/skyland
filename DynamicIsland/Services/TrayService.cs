@@ -11,12 +11,16 @@ public sealed class TrayService : IDisposable
     private readonly NotifyIcon _icon;
     private readonly Icon _iconImage;
 
-    public TrayService(Action openSettings, Action exit)
+    public TrayService(Action openSettings, Action showIsland, Action exit)
     {
         _iconImage = LoadIcon();
 
         var settingsItem = new ToolStripMenuItem("Settings...");
         settingsItem.Click += (_, _) => openSettings();
+
+        // Brings the island back when it is minimized into the round icon.
+        var showItem = new ToolStripMenuItem("Show island");
+        showItem.Click += (_, _) => showIsland();
 
         // Handy if the island was dragged somewhere awkward.
         var resetItem = new ToolStripMenuItem("Reset position");
@@ -26,6 +30,7 @@ public sealed class TrayService : IDisposable
         exitItem.Click += (_, _) => exit();
 
         var menu = new ContextMenuStrip();
+        menu.Items.Add(showItem);
         menu.Items.Add(settingsItem);
         menu.Items.Add(resetItem);
         menu.Items.Add(new ToolStripSeparator());

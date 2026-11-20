@@ -40,6 +40,7 @@ The island works like the iOS Dynamic Island: **one main thing at a time, plus a
 
 - **Priority:** Claude (a working or waiting session) > Focus > music. The first is the **main capsule**, the second is the **bubble** on its right. A third one only shows inside the card. An open but idle Claude session only counts when nothing else is on.
 - **Hover the capsule** = its card. **Hover the bubble** = that activity's card (for example the music player with previous / play / next while Claude runs), and the capsule's activity shrinks into the bubble. Hovering the shrunken bubble swaps back. The PC row (CPU, RAM, GPU, battery) shows only on the main card, not on the bubble's card. Hovering the idle island opens the **System card** with four ring gauges.
+- **Minus button:** every open card also has a minus next to the gear that minimizes the island into a round icon on the screen edge (see "Minimize to a round icon").
 - **Settings gear:** every open card has a small gear in its top-right corner (`CardSettingsButton`, style `GearButton`); clicking it opens the Settings window (`App.ShowSettings`), so nobody has to hunt for the tray icon. The header chips and the music title leave room for it.
 - **Capsules:** Claude = status ring around the Claude symbol (spinning violet arc = working, breathing amber ring = needs you), project name, timer (or the tool name when it needs permission); several sessions = a stack of avatars, "N sessions", "N needs you" / "all working". Focus = ring with the minutes, "Focus / session 1 of 3", countdown. Music = artwork, title and artist, equaliser.
 - **Bubble:** Claude symbol in its status ring with a count badge when there are several sessions; music artwork inside a progress ring; Focus ring with the minutes.
@@ -104,6 +105,16 @@ The island mirrors the Windows Clock app, read-only: you start, pause and stop s
 - If several timers run, the one that finishes first is shown.
 - Not implemented: controlling Clock from the island, and a phase-end pop-up.
 
+## Minimize to a round icon
+Every open card has a **minus button** next to the settings gear. Click it and the island shrinks into a 44 px round icon with the SkyLand logo, which glides to the left or right edge of the screen. **Click the icon** and it glides back to the island's place, which opens again. **Drag the icon** anywhere: on release it snaps to the nearest left or right edge of the screen it is on and keeps its height. The state is remembered: SkyLand started while minimized shows only the icon (no start-up animation).
+
+- **Status ring:** instead of dots, a colored ring around the icon's circumference shows what needs attention: amber = a Claude session needs you, orange = an app uses the microphone, green = the camera; several at once share the ring equally. With nothing to report the ring is a quiet dark gray. The colored ring pulses slowly (20 fps, only while the icon is visible). Hovering the icon shows what it is about ("Microphone in use: Teams").
+- **Which edge (Settings > Island > Minimized icon):** **Automatic** (default) uses the edge nearest to the island the first time and then wherever you drop it. **Left** or **Right** always docks the icon on that edge: dropping it elsewhere snaps it to the chosen edge (only the height is free), and changing the choice while the icon is on screen makes it glide to the new edge at once (`MinimizedSide` in the settings file, `DockWindow.ForcedLeft`).
+- **First position:** the edge nearest to the island (the right edge when it is centered), a third of the way down the screen. Afterwards the remembered spot (`DockLeft`, `DockTop` in the settings file, window position in DIPs; `Minimized` says whether it starts minimized). Reset position (Settings or the tray) forgets it.
+- **While minimized** the island window is hidden and does not redraw; pop-ups, alerts and the other states wait. Only the ring is updated.
+- **Other ways back:** tray menu **Show island**.
+- **Code:** `DockWindow.xaml(.cs)` (the icon: a 52 x 52 non-activating transparent window, so the ring has room; click vs. drag, snapping, `GlideTo`), `MainWindow.Dock.cs` (`MinimizeToDock`, `RestoreFromDock`, `UpdateDockStatus`), the minus button `CardMinimizeButton` in `MainWindow.xaml`. The logo shapes are shared resources (`LogoShape1`-`4` in `App.xaml`) used by the start-up animation and the icon. The icon window needs the main window's screen scaling before it has been shown itself (`ToDevice()`), otherwise it lands off screen when SkyLand starts minimized.
+
 ## Camera and microphone indicator
 When an app starts using the **camera** or the **microphone**, the island shows a 3-second pop-up (270 x 44, same height as a capsule): icon on the left, "Camera in use" or "Microphone in use" or "Camera and microphone" with the app name under it, and a pulsing **LIVE** on the right. The pop-up then gives way to a small dot **inside** the island, vertically centered on its right edge (**green = camera, orange = microphone**, with a slow pulse ring; the collapsed island grows 24 px, 40 px for two dots, to give the dots their own spot beside the timer or stats) that stays while the device is in use. The dots show only while the island is collapsed: they are hidden while a card is open (and during pop-ups). Under an open card a line says which app uses what ("Camera - Zoom, Microphone - Teams"). When the app stops, its dot shrinks away.
 
@@ -114,16 +125,26 @@ When an app starts using the **camera** or the **microphone**, the island shows 
 - **Setting:** Settings > Island > Camera and microphone indicator (on by default). Off stops all reading.
 - **Code:** `MainWindow.Privacy.cs` (polling, pop-up queue, dots, the line under the card), `IslandState.Privacy` in `MainWindow.xaml.cs`, `PrivacyView`, `PrivacyDots` and `PrivacyStrip` in `MainWindow.xaml`. The dots (`PrivacyDots`) sit inside the pill's grid, centered on the right; `FadeView` hides them when the state is not Idle or Capsule, and `CollapsedDotExtraWidth()` widens the collapsed island for them.
 - **Test seam:** `SKYLAND_PRIVACY_FAKE=1` reads `%TEMP%\skyland-privacy-fake.txt` instead of the registry: lines like `camera=Zoom` and `microphone=Teams, Zoom`. Used for the screenshots and tests, because the camera cannot be started on demand (the microphone path was also tested for real with a throwaway capture stream that discards its data).
-- Not included: Bluetooth, USB and monitor connection pop-ups (you chose camera and microphone only). Third-party: NAudio (MIT), listed in `NOTICE`.
+- Third-party: NAudio (MIT), listed in `NOTICE`. Bluetooth, USB and charging pop-ups are described in their own section.
 
-## Power pop-up
-When the charger is connected the island flashes a standard 270 x 60 pill for 3 s: green bolt, green "Charging", and the battery percentage. Unplugging shows a neutral "Unplugged" with a battery outline and the percentage. Afterwards the island returns to whatever it was showing (stats or media).
+## Bluetooth, USB and charging pop-ups
+One capsule pop-up (270 x 44, 3 seconds, no dot afterwards) shared by devices and charging, in the same layout as the microphone pop-up: icon on the left, a title with a small line under it, a value on the right. They queue one at a time (at most 3 waiting) and rank like the microphone pop-up: above a hovered card, below the intro and the update prompt.
 
-- Driven by `SystemEvents.PowerModeChanged` (`StatusChange`), so there is no polling. The handler compares against the last known AC state, so battery-level changes do not trigger it.
-- Takes priority over every other state, including expanded.
-- Not shown on PCs without a battery, and not at app start.
-- Fixed 3 s duration and always on: there is no Settings option yet.
-- State machine: `IslandState.Notice`; `ShowPowerNotice()` in `MainWindow.xaml.cs`. Some laptops report the change a second or two after plugging in.
+| Event | Icon | Title / line / value |
+|-------|------|----------------------|
+| Bluetooth device connects | blue Bluetooth | "Wireless Headphones / Connected / 82%" (the battery level only when Windows reports one) |
+| Bluetooth device disconnects | gray Bluetooth | "Wireless Headphones / Disconnected" |
+| USB drive plugged in | blue USB | "USB drive connected / Backup (E:) / 32 GB" |
+| USB drive removed | gray USB | "USB drive removed / Backup (E:)" |
+| Other USB device plugged in / removed | blue / gray USB | "Logitech USB Receiver / USB device connected" |
+| Charger connected | green bolt | "Charging / Charger connected / 76%" |
+| Charger unplugged | white battery | "Unplugged / Running on battery / 76%" |
+
+- **Detection (`Services/DeviceService.cs`):** Bluetooth uses WinRT device watchers on connected devices (classic and LE; the first pass lists what is already connected and is ignored; the battery comes from the `{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2` property). USB uses `WM_DEVICECHANGE`: drives arrive as volume broadcasts (only removable drives: a USB hard disk that Windows calls a fixed disk is not announced), other devices through a registered USB device-interface notification, with the name taken from `HKLM\SYSTEM\CurrentControlSet\Enum\USB` (hubs, Bluetooth radios and mass-storage plumbing are skipped). The same event within 4 s is ignored (Bluetooth classic plus LE, composite USB devices). Nothing is read from the devices themselves.
+- **Charging:** `SystemEvents.PowerModeChanged` (`StatusChange`) compares the AC state with the last known one, so battery-level changes do not trigger it. Not shown on PCs without a battery, and not at app start. Some laptops report the change a second or two after plugging in. (The agent pop-ups, "needs you" and "Done", still use the older two-line 270 x 60 pop-up, `IslandState.Notice`.)
+- **Setting:** Settings > Island > Bluetooth and USB pop-ups (on by default). Charging pop-ups are always on.
+- **Code:** `MainWindow.Devices.cs` (message hook, setting, queue), `MainWindow.Privacy.cs` (the shared pop-up and queue: `PopupItem`, `ShowNextPrivacyPopup`), `ShowPowerNotice` in `MainWindow.xaml.cs`.
+- **Test seams:** `SKYLAND_DEVICE_FAKE=1` reads `%TEMP%\skyland-device-fake.txt` (one event per line: `bt|+|Wireless Headphones|Connected|82%`); `SKYLAND_POWER_FAKE=charging|unplugged` shows the charging pop-up 8 s after start. Real Bluetooth and USB events were not available to test with on the development PC.
 
 ## PC stats
 Shown in three places: the **idle island** (a row of icon + percentage for CPU, memory, GPU and battery), the **bottom row of the main card**, and the **System card** (ring gauges, opens when you hover the idle island). The optional performance bubble and the alert strip use the same readings. Icons are 12x12 vector `Path`s in `MainWindow.xaml` (no icon font); hover an icon for its name.
@@ -150,6 +171,8 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | Island | Expand when you: Hover / Click | Hover | Hover expands on mouse enter; Click expands on click of the compact pill. Both collapse 250 ms after the mouse leaves |
 | Island | Pop up on track change | off | Expands for 3 s when the track changes (not on app start, pause or resume) |
 | Island | Performance ring: Off / Rings / CPU | Off | Ring-gauge bubble on the left of the island |
+| Island | Minimized icon: Automatic / Left / Right | Automatic | Which screen edge the round icon of the minimized island docks to |
+| Island | Bluetooth and USB pop-ups | on | Pop-up when a Bluetooth device connects or disconnects, or a USB drive or device is plugged in or removed |
 | Island | Camera and microphone indicator | on | Pop-up, then a green / orange dot while an app uses the camera / microphone |
 | Island | Heavy load and low battery alerts | on | Alert strip under the capsule (5 s, then silent for 2 minutes) |
 | Integrations | Sync Microsoft Clock | on | Mirrors Clock's Focus sessions and timers (see above) |
@@ -167,6 +190,10 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | `Services/TrayService.cs` | Tray icon (drawn in code, WinForms `NotifyIcon`): double-click or "Settings..." opens Settings, "Exit" quits |
 | `Services/StartupService.cs` | Autostart via `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (no admin needed). The registry is the source of truth, not the settings file |
 | `MainWindow.Agent.cs` | Coding agent UI: Claude capsule, bubble, session list card, status rings and avatars, pop-ups |
+| `DockWindow.xaml(.cs)` | The minimized island: the round icon on a screen edge, with the status ring |
+| `MainWindow.Dock.cs` | Minimize and restore animations, the status ring, start minimized |
+| `MainWindow.Devices.cs` | Bluetooth and USB pop-ups: message hook, setting, queue |
+| `Services/DeviceService.cs` | Bluetooth watchers and USB device-change handling |
 | `MainWindow.Privacy.cs` | Camera / microphone in use: polling, pop-up queue, dots, usage line under the card |
 | `Services/PrivacyService.cs` | Reads Windows' camera / microphone usage records (registry), with friendly app names |
 | `MainWindow.Stats.cs` | PC stats sampling, System card gauges, performance bubble, heavy-load and battery alerts |

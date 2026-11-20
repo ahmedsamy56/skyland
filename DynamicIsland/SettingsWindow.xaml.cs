@@ -29,16 +29,35 @@ public partial class SettingsWindow : Window
         Closed += (_, _) => App.Updates.Changed -= OnUpdatesChanged;
         HoverOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Hover;
         ClickOption.IsChecked = settings.ExpandTrigger == ExpandTrigger.Click;
+        DockAutoOption.IsChecked = settings.MinimizedSide == DockSide.Auto;
+        DockLeftOption.IsChecked = settings.MinimizedSide == DockSide.Left;
+        DockRightOption.IsChecked = settings.MinimizedSide == DockSide.Right;
         PerfOffOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Off;
         PerfRingsOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Rings;
         PerfCpuOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Cpu;
         LoadAlertToggle.IsChecked = settings.ShowLoadAlerts;
         PrivacyToggle.IsChecked = settings.ShowPrivacyIndicator;
+        DeviceToggle.IsChecked = settings.ShowDeviceEvents;
+    }
+
+    private void DeviceToggle_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsService.Current.ShowDeviceEvents = DeviceToggle.IsChecked == true;
+        SettingsService.Save();
     }
 
     private void PrivacyToggle_Click(object sender, RoutedEventArgs e)
     {
         SettingsService.Current.ShowPrivacyIndicator = PrivacyToggle.IsChecked == true;
+        SettingsService.Save();
+    }
+
+    private void DockOption_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsService.Current.MinimizedSide =
+            DockLeftOption.IsChecked == true ? DockSide.Left
+            : DockRightOption.IsChecked == true ? DockSide.Right
+            : DockSide.Auto;
         SettingsService.Save();
     }
 

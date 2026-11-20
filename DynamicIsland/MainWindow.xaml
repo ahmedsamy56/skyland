@@ -48,7 +48,7 @@
                 MouseLeftButtonUp="Pill_MouseLeftButtonUp"
                 MouseEnter="Pill_MouseEnter"
                 MouseLeave="Pill_MouseLeave">
-            <Grid ClipToBounds="True">
+            <Grid x:Name="PillContent" ClipToBounds="True">
 
                 <!-- Music card background: a soft teal wash behind the player -->
                 <Border x:Name="MusicCardBg" Opacity="0" IsHitTestVisible="False"
@@ -112,10 +112,10 @@
                                 <Canvas.RenderTransform>
                                     <TranslateTransform X="-506.8" Y="-291.96" />
                                 </Canvas.RenderTransform>
-                                <Path Data="F1 M783.97293,295.83075c0,0 -141.90424,-7.59174 -174.17538,0c-12.95689,3.04809 -19.05778,5.89038 -26.3997,12.81571c-7.37698,6.95843 -12.45152,16.34292 -17.75744,28.83602c-7.49172,17.63966 -18.05221,49.70935 -19.54539,70.1503c-1.1094,15.1874 -0.35552,32.70835 5.31908,40.68919c5.21242,7.33086 25.67446,8.63522 25.67446,8.63522c0,0 103.29774,2.47928 111.46864,1.21748c0.21708,4.08909 -1.26785,8.98054 -1.26785,8.98054l-8.99753,37.00719l-154.44017,-0.90818l-16.55047,61.27186c0,0 146.15053,3.16485 178.11445,1.05642c10.88188,-2.02351 15.17649,-3.264 21.69392,-8.36556c6.05458,-6.38491 12.87272,-12.68787 18.50005,-24.3832c8.99723,-18.699 21.25762,-61.82846 22.85541,-83.4565c0.97419,-13.18701 0.21296,-24.18014 -3.79209,-32.65661c-3.9504,-8.36083 -10.1015,-12.64051 -19.85143,-18.05115c-22.30669,-3.52324 -110.14495,1.73721 -117.94634,-0.87423c-0.75731,-1.38147 0.16162,-5.0416 0.16162,-5.0416l7.01057,-30.38411c0,0 0.86324,-3.47758 2.55154,-5.0104c10.46044,-2.55499 152.3623,0.07715 152.3623,0.07715z" Fill="#2563eb" Stroke="#2563eb" StrokeThickness="1" StrokeLineJoin="Round" />
-                                <Path Data="F1 M757.6668,567.59583l124.46537,-144.20314l57.35169,73.34043l19.52399,-15.85741l48.4032,58.47413l-46.7762,-30.22815l-29.69272,26.2638l-50.43695,-60.45631l-76.46892,67.88946z" Fill="#ffffff" Stroke="#eeeeee" StrokeThickness="1" StrokeLineJoin="Round" />
-                                <Path Data="F1 M940.27426,497.51741l14.70305,16.23414l5.90791,-4.47996l44.20781,27.30574l-45.83861,-55.2604z" Fill="#62abf7" />
-                                <Path Data="F1 M881.02019,474.25577c-0.69771,-2.01578 -1.19951,-4.29276 -1.54295,-6.73652c-2.45604,-17.47576 3.18571,-43.48037 3.18571,-43.48037l57.12907,73.11627l15.4282,16.65799l-23.53853,20.69519c0,0 -43.54281,-39.68578 -50.6615,-60.25256z" Fill="#e5effc" />
+                                <Path Data="{StaticResource LogoShape1}" Fill="#2563eb" Stroke="#2563eb" StrokeThickness="1" StrokeLineJoin="Round" />
+                                <Path Data="{StaticResource LogoShape2}" Fill="#ffffff" Stroke="#eeeeee" StrokeThickness="1" StrokeLineJoin="Round" />
+                                <Path Data="{StaticResource LogoShape3}" Fill="#62abf7" />
+                                <Path Data="{StaticResource LogoShape4}" Fill="#e5effc" />
                             </Canvas>
                         </Viewbox>
                         <!-- The letters of "SkyLand" are added in code so each can be animated -->
@@ -305,7 +305,7 @@
                             <TextBlock Grid.Column="1" Text="Claude Code" Foreground="White" FontSize="15" FontWeight="SemiBold"
                                        Margin="10,0,0,0" VerticalAlignment="Center" />
                             <Border Grid.Column="2" CornerRadius="11" Padding="9,3" Background="#1D1D22"
-                                    VerticalAlignment="Center" Margin="0,0,34,0">
+                                    VerticalAlignment="Center" Margin="0,0,62,0">
                                 <TextBlock x:Name="ClaudeCountText" FontSize="11" FontWeight="Bold" Foreground="#A78BFA" />
                             </Border>
                         </Grid>
@@ -324,7 +324,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Border x:Name="ArtLarge" Width="58" Height="58" CornerRadius="12" Background="#2A2A2E" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="13,0,34,0">
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="13,0,62,0">
                                 <TextBlock x:Name="TitleLarge" Foreground="White" FontSize="15"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                 <TextBlock x:Name="ArtistLarge" Foreground="#B9D3D3" FontSize="12.5"
@@ -380,7 +380,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <StackPanel Grid.Column="1" Margin="18,0,26,0" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Margin="18,0,54,0" VerticalAlignment="Center">
                             <Border x:Name="FocusChip" HorizontalAlignment="Left" CornerRadius="10" Padding="9,2.5"
                                     Background="#33FF6A3D">
                                 <TextBlock x:Name="FocusPhase" FontSize="10.5" FontWeight="Bold" Foreground="#FF6A3D" />
@@ -402,7 +402,7 @@
                         <Grid Height="28">
                             <TextBlock Text="System" Foreground="White" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
                             <Border x:Name="PowerChip" HorizontalAlignment="Right" CornerRadius="11" Padding="9,3"
-                                    Background="#1D1D22" VerticalAlignment="Center" Margin="0,0,34,0">
+                                    Background="#1D1D22" VerticalAlignment="Center" Margin="0,0,62,0">
                                 <TextBlock x:Name="PowerChipText" FontSize="11" FontWeight="Bold" Foreground="#30D158" />
                             </Border>
                         </Grid>
@@ -415,6 +415,11 @@
                            Margin="20,0,20,38" Opacity="0" IsHitTestVisible="False" />
 
                 <!-- Settings: a small gear in the top-right corner of every open card -->
+                <!-- Minimize: shrinks the island into a round icon on the screen edge -->
+                <Button x:Name="CardMinimizeButton" Style="{StaticResource GearButton}" Click="CardMinimize_Click"
+                        Content="&#xE738;" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,46,0"
+                        Opacity="0" IsHitTestVisible="False" ToolTip="Minimize to a round icon"
+                        AutomationProperties.Name="Minimize SkyLand to a round icon" />
                 <Button x:Name="CardSettingsButton" Style="{StaticResource GearButton}" Click="CardSettings_Click"
                         HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,16,0"
                         Opacity="0" IsHitTestVisible="False" ToolTip="Settings"

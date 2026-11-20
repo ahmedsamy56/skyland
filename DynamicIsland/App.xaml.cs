@@ -46,7 +46,7 @@ public partial class App : Application
         Updates.ExitRequested += () => Dispatcher.InvokeAsync(Shutdown);
 
         base.OnStartup(e);
-        _tray = new TrayService(ShowSettings, Shutdown);
+        _tray = new TrayService(ShowSettings, () => (MainWindow as MainWindow)?.RestoreIsland(), Shutdown);
     }
 
     /// <summary>Opens the Settings window, or brings the existing one to the front.</summary>

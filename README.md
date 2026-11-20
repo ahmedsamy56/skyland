@@ -44,6 +44,14 @@
     <td align="center"><img src="docs/images/privacy-dot.png" alt="The Claude Code capsule with an orange microphone dot on the right"><br><sub>Then an orange dot stays while it does.</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/images/bluetooth-popup.png" alt="A pop-up: Wireless Headphones connected, 82 percent"><br><sub>A Bluetooth device connects, with its battery.</sub></td>
+    <td align="center"><img src="docs/images/usb-popup.png" alt="A pop-up: USB drive connected, 32 GB"><br><sub>A USB drive is plugged in.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/charging-popup.png" alt="A pop-up: Charging, charger connected, 76 percent"><br><sub>Charger connected.</sub></td>
+    <td align="center"><img src="docs/images/dock-icon.png" width="100" alt="The minimized island: a round SkyLand icon with an orange ring"><br><sub>Minimized to a round icon on the screen edge; the ring shows the microphone is in use.</sub></td>
+  </tr>
+  <tr>
     <td align="center"><img src="docs/images/alert.png" alt="An alert under the island: High Memory load"><br><sub>A short alert under the island for heavy load or a low battery.</sub></td>
     <td align="center"><img src="docs/images/perf-rings.png" alt="The optional performance ring bubble on the left"><br><sub>Optional performance rings on the left.</sub></td>
   </tr>
@@ -61,7 +69,7 @@ The island works like the iOS Dynamic Island: **one main thing at a time, plus a
 | **PC stats** | CPU, memory, GPU and battery when nothing else is on, and along the bottom of the main card. |
 | **Alerts** | A short line under the island when the CPU, memory or GPU stays heavily loaded, or the battery is low. It shows once, then stays quiet for two minutes. |
 | **Camera and microphone** | A short pop-up with the app name when an app starts using your microphone (orange dot) or camera (green dot), then the dot while it does. Nothing is recorded: only which app is capturing is read. The microphone works on every Windows 11 build; the camera needs a build that still records camera use in the registry (newer builds hide it). |
-| **Charging** | A short pop-up when you plug in or unplug the charger. |
+| **Devices and charging** | Short pop-ups when a Bluetooth device connects or disconnects (with its battery level when Windows reports one), a USB drive or device is plugged in or removed, or the charger is connected or unplugged. |
 
 The most important thing (Claude, then Focus, then music) is the **main capsule**; the next one is the **bubble** beside it. Hover the capsule to open its card, or hover the bubble to open that card instead, for example the music player while Claude is running. You can also turn on a small **performance ring** bubble on the left (Settings > Island). **Drag the island anywhere** on screen, for example below your browser tabs; it remembers the spot and snaps back to the top centre when you get close.
 
@@ -78,9 +86,10 @@ It installs for the current user only, so there is **no admin prompt**. SkyLand 
 
 ## Use it
 
+- **Minimize:** open any card and click the **minus** next to the gear. The island shrinks into a small round SkyLand icon on the left or right screen edge, with a colored ring when something needs you (amber: Claude, orange: microphone, green: camera). Choose the left or right edge (or automatic) in Settings > Island > Minimized icon, and drag the icon along the edge to move it; click it, or choose *Show island* in the tray menu, to bring the island back.
 - **Settings gear:** open any card (hover the island) and click the small gear in its top-right corner.
 - **Tray icon:** double-click for Settings; right-click for *Settings*, *Reset position* and *Exit*.
-- **Settings** has switches for the expand trigger (hover or click), pop-up on track change, the performance ring, the camera and microphone indicator, heavy-load and low-battery alerts, Microsoft Clock sync, Claude Code status, automatic updates, and a *Reset position* button.
+- **Settings** has switches for the expand trigger (hover or click), pop-up on track change, the performance ring, the camera and microphone indicator, Bluetooth and USB pop-ups, heavy-load and low-battery alerts, Microsoft Clock sync, Claude Code status, automatic updates, and a *Reset position* button.
 
 ### Claude Code
 

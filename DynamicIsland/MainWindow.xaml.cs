@@ -138,16 +138,24 @@ public partial class MainWindow : Window
         InitUpdates();
         InitStats();
         InitPrivacy();
+        InitDevices();
+        InitDock();
 
         Loaded += async (_, _) =>
         {
             BuildGauges();
+            if (_startDocked) EnterDockedAtStart();
             ApplyClockSetting();
             ApplyAgentSetting();
             StartStats();
             ApplyPrivacySetting();
             _ = StartUpdatesAsync();
             _ = StartIntroAsync();
+            if (Environment.GetEnvironmentVariable("SKYLAND_POWER_FAKE") is { Length: > 0 } fake)   // test seam: screenshots only
+            {
+                await Task.Delay(8000);
+                ShowPowerNotice(fake == "charging", 76);
+            }
 
             _media.Changed += (_, _) => Dispatcher.InvokeAsync(RefreshAsync);
             await _media.InitializeAsync();
@@ -159,13 +167,17 @@ public partial class MainWindow : Window
 
     private void Window_SourceInitialized(object? sender, EventArgs e)
     {
-        NativeMethods.MakeOverlay(new WindowInteropHelper(this).Handle);
+        var handle = new WindowInteropHelper(this).Handle;
+        NativeMethods.MakeOverlay(handle);
+        HookDevices(handle);
     }
 
     // Settings such as the performance bubble change what is on screen.
     private void OnSettingsChanged()
     {
         ApplyPrivacySetting();
+        ApplyDeviceSetting();
+        ApplyDockSetting();
         ApplyState();
     }
 
@@ -237,6 +249,13 @@ public partial class MainWindow : Window
 
     private void ApplyState()
     {
+        // Minimized (or on its way there): only the round icon is on screen, so only its ring needs updating.
+        if (_docked || _dockBusy)
+        {
+            UpdateDockStatus();
+            return;
+        }
+
         bool hasMedia = _current is not null;
         bool hasClock = _clockSnap is not null;
         bool hasAgent = _agentSessions.Count > 0;
@@ -330,6 +349,7 @@ public partial class MainWindow : Window
             FadeView(FocusPageView, target == IslandState.Card && cardKind == Kind.Focus);
             FadeView(SystemCard, target == IslandState.Card && cardKind is null);
             FadeView(CardSettingsButton, target == IslandState.Card);
+            FadeView(CardMinimizeButton, target == IslandState.Card);
 
             FadeView(PrivacyView, target == IslandState.Privacy);
             FadeView(NoticeView, target == IslandState.Notice);
@@ -649,10 +669,22 @@ public partial class MainWindow : Window
         });
     }
 
-    private void ShowPowerNotice(bool pluggedIn, int percent) =>
-        ShowNotice(pluggedIn ? "Charging" : "Unplugged", $"{percent}%",
-                   pluggedIn ? ChargingGreen : NormalBrush,
-                   pluggedIn ? NoticeIcon.Bolt : NoticeIcon.Battery);
+    // Charging and unplugging use the same capsule pop-up as the Bluetooth and USB devices:
+    // icon on the left, "Charging / Charger connected", the battery level on the right.
+    private void ShowPowerNotice(bool pluggedIn, int percent)
+    {
+        _privacyQueue.Enqueue(new PopupItem(
+            pluggedIn ? ChargingBoltGlyph : BatteryOutlineGlyph,
+            pluggedIn ? ChargingGreen : NormalBrush,
+            pluggedIn ? "Charging" : "Unplugged",
+            pluggedIn ? "Charger connected" : "Running on battery",
+            $"{percent}%", Live: false, FillIcon: pluggedIn));
+
+        if (!_privacyPopup) ShowNextPrivacyPopup();
+    }
+
+    private static readonly Geometry ChargingBoltGlyph = Freeze(Geometry.Parse("M13.5,2 L5,13.5 H11 L10,22 L19,10 H12.8 Z"));
+    private static readonly Geometry BatteryOutlineGlyph = Freeze(Geometry.Parse("M2.5,7 H18.5 V17 H2.5 Z M18.5,10 H21.5 V14 H18.5"));
 
     private enum NoticeIcon { Bolt, Battery, Dot }
 
@@ -683,6 +715,7 @@ public partial class MainWindow : Window
         SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
         _clock.Stop();
         _agent.Stop();
+        _devices.Stop();
         base.OnClosed(e);
     }
 

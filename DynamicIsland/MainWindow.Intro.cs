@@ -23,6 +23,9 @@ public partial class MainWindow
     // Called before the window is first shown: the intro always shows. With animations, it starts from the dot.
     private void PrepareIntro()
     {
+        // Starting minimized: no intro, the island stays tucked away.
+        if (SettingsService.Current.Minimized) return;
+
         _introAnimated = SystemParameters.ClientAreaAnimation;
 
         foreach (char c in IntroName)
