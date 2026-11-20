@@ -36,6 +36,8 @@
         </Border>
 
         <StackPanel Grid.Column="1">
+        <!-- PillHost sizes itself to the pill, so the privacy dots can sit on the pill's top-right corner. -->
+        <Grid x:Name="PillHost" HorizontalAlignment="Center">
         <Border x:Name="Pill"
                 Background="Black"
                 Width="232" Height="32"
@@ -121,9 +123,10 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Update prompt: stays until you choose Install or Later; then shows download progress -->
-                <Grid x:Name="UpdateView" Width="270" Height="60"
-                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                <!-- Update prompt (44 px high, like a capsule): download mark, "Update 1.3.0 / Ready to install",
+                     Install and Later. Stays until you choose; then shows the download progress. -->
+                <Grid x:Name="UpdateView" Width="306" Height="44"
+                      HorizontalAlignment="Left" VerticalAlignment="Top"
                       Opacity="0" IsHitTestVisible="False">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -131,18 +134,50 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Ellipse Grid.Column="0" Width="10" Height="10" Fill="#0A84FF" Margin="20,0,0,0"
-                             VerticalAlignment="Center" />
+                    <Grid Grid.Column="0" Width="28" Height="28" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <Ellipse Fill="#260A84FF" />
+                        <TextBlock Text="&#xE896;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"
+                                   Foreground="#3D9CFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
 
-                    <TextBlock x:Name="UpdateText" Grid.Column="1" Margin="9,0,6,0" Foreground="White"
-                               FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Column="1" Margin="10,0,6,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="UpdateTitle" Foreground="White" FontSize="13.5" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="UpdateSub" Foreground="#9A9AA3" FontSize="10.5" Margin="0,-1,0,0"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                        <Button x:Name="UpdateInstallButton" Content="Install" FontSize="12"
-                                Style="{StaticResource PillButton}" Click="UpdateInstall_Click" Margin="0,0,6,0" />
-                        <Button x:Name="UpdateLaterButton" Content="Later" FontSize="12"
-                                Style="{StaticResource PillButton}" Click="UpdateLater_Click" />
+                        <Button x:Name="UpdateInstallButton" Content="Install" Style="{StaticResource AccentPill}"
+                                Click="UpdateInstall_Click" Margin="0,0,6,0" />
+                        <Button x:Name="UpdateLaterButton" Content="Later" Style="{StaticResource GhostPill}"
+                                Click="UpdateLater_Click" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Camera / microphone pop-up (44 px high): icon, "Camera in use / Zoom", LIVE. After 3 s it
+                     gives way to the colored dot on the pill's corner. -->
+                <Grid x:Name="PrivacyView" Width="270" Height="44"
+                      HorizontalAlignment="Left" VerticalAlignment="Top"
+                      Opacity="0" IsHitTestVisible="False">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Path x:Name="PrivacyIcon" Grid.Column="0" Width="20" Height="20" Margin="14,0,0,0" Stretch="Uniform"
+                          Stroke="#30D158" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          StrokeLineJoin="Round" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Margin="10,0,6,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="PrivacyTitle" Foreground="White" FontSize="13.5" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="PrivacySub" Foreground="#9A9AA3" FontSize="10.5" Margin="0,-1,0,0"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <Ellipse x:Name="PrivacyLiveDot" Width="7" Height="7" Fill="#30D158" VerticalAlignment="Center" />
+                        <TextBlock x:Name="PrivacyLive" Text="LIVE" Foreground="#30D158" FontSize="13" FontWeight="SemiBold"
+                                   Margin="6,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                 </Grid>
 
@@ -270,7 +305,7 @@
                             <TextBlock Grid.Column="1" Text="Claude Code" Foreground="White" FontSize="15" FontWeight="SemiBold"
                                        Margin="10,0,0,0" VerticalAlignment="Center" />
                             <Border Grid.Column="2" CornerRadius="11" Padding="9,3" Background="#1D1D22"
-                                    VerticalAlignment="Center">
+                                    VerticalAlignment="Center" Margin="0,0,34,0">
                                 <TextBlock x:Name="ClaudeCountText" FontSize="11" FontWeight="Bold" Foreground="#A78BFA" />
                             </Border>
                         </Grid>
@@ -289,7 +324,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Border x:Name="ArtLarge" Width="58" Height="58" CornerRadius="12" Background="#2A2A2E" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="13,0,0,0">
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="13,0,34,0">
                                 <TextBlock x:Name="TitleLarge" Foreground="White" FontSize="15"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                 <TextBlock x:Name="ArtistLarge" Foreground="#B9D3D3" FontSize="12.5"
@@ -345,7 +380,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <StackPanel Grid.Column="1" Margin="18,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Margin="18,0,26,0" VerticalAlignment="Center">
                             <Border x:Name="FocusChip" HorizontalAlignment="Left" CornerRadius="10" Padding="9,2.5"
                                     Background="#33FF6A3D">
                                 <TextBlock x:Name="FocusPhase" FontSize="10.5" FontWeight="Bold" Foreground="#FF6A3D" />
@@ -367,7 +402,7 @@
                         <Grid Height="28">
                             <TextBlock Text="System" Foreground="White" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
                             <Border x:Name="PowerChip" HorizontalAlignment="Right" CornerRadius="11" Padding="9,3"
-                                    Background="#1D1D22" VerticalAlignment="Center">
+                                    Background="#1D1D22" VerticalAlignment="Center" Margin="0,0,34,0">
                                 <TextBlock x:Name="PowerChipText" FontSize="11" FontWeight="Bold" Foreground="#30D158" />
                             </Border>
                         </Grid>
@@ -379,7 +414,51 @@
                 <Rectangle x:Name="StatsDivider" Height="1" Fill="#14FFFFFF" VerticalAlignment="Bottom"
                            Margin="20,0,20,38" Opacity="0" IsHitTestVisible="False" />
 
+                <!-- Settings: a small gear in the top-right corner of every open card -->
+                <Button x:Name="CardSettingsButton" Style="{StaticResource GearButton}" Click="CardSettings_Click"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,16,0"
+                        Opacity="0" IsHitTestVisible="False" ToolTip="Settings"
+                        AutomationProperties.Name="Open SkyLand settings" />
+
+                <!-- Microphone (orange) and camera (green) in use: small dots inside the pill, centered on the right edge. They show only
+                     while the island is collapsed. -->
+                <StackPanel x:Name="PrivacyDots" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Margin="0,0,10,0" IsHitTestVisible="False">
+                    <Grid x:Name="CamDot" Width="8" Height="8" Margin="0,0,5,0" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="CamDotScale" />
+                        </Grid.RenderTransform>
+                        <Ellipse x:Name="CamDotPing" Width="8" Height="8" Stroke="#30D158" StrokeThickness="1.2" Opacity="0"
+                                 RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <ScaleTransform x:Name="CamPingScale" ScaleX="0.7" ScaleY="0.7" />
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse Width="8" Height="8" Fill="#30D158" />
+                    </Grid>
+                    <Grid x:Name="MicDot" Width="8" Height="8" Visibility="Collapsed" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="MicDotScale" />
+                        </Grid.RenderTransform>
+                        <Ellipse x:Name="MicDotPing" Width="8" Height="8" Stroke="#FF9F0A" StrokeThickness="1.2" Opacity="0"
+                                 RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <ScaleTransform x:Name="MicPingScale" ScaleX="0.7" ScaleY="0.7" />
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse Width="8" Height="8" Fill="#FF9F0A" />
+                    </Grid>
+                </StackPanel>
+
             </Grid>
+        </Border>
+
+        </Grid>
+
+        <!-- Under an open card: which app uses the camera and the microphone -->
+        <Border x:Name="PrivacyStrip" CornerRadius="16" Background="Black" Padding="15,7"
+                Margin="0,8,0,0" HorizontalAlignment="Center" Visibility="Collapsed" Opacity="0" IsHitTestVisible="False">
+            <TextBlock x:Name="PrivacyStripText" Foreground="White" FontSize="12.5" FontWeight="SemiBold" />
         </Border>
 
         <!-- Alert strip: a short line under the capsule when the PC is under heavy load or the battery is low -->

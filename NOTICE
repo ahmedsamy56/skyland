@@ -3,3 +3,7 @@ Copyright 2026 C B Sajan (https://github.com/cbsajan)
 
 This product includes software developed by C B Sajan, published under the SkyZack name
 (https://github.com/cbsajan/skyland).
+
+Third-party software:
+- NAudio (https://github.com/naudio/NAudio), MIT License, Copyright Mark Heath and contributors.
+  Used to ask the Windows audio engine which apps are using the microphone.

@@ -33,6 +33,13 @@ public partial class SettingsWindow : Window
         PerfRingsOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Rings;
         PerfCpuOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Cpu;
         LoadAlertToggle.IsChecked = settings.ShowLoadAlerts;
+        PrivacyToggle.IsChecked = settings.ShowPrivacyIndicator;
+    }
+
+    private void PrivacyToggle_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsService.Current.ShowPrivacyIndicator = PrivacyToggle.IsChecked == true;
+        SettingsService.Save();
     }
 
     private void PerfOption_Click(object sender, RoutedEventArgs e)

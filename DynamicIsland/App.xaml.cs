@@ -50,7 +50,7 @@ public partial class App : Application
     }
 
     /// <summary>Opens the Settings window, or brings the existing one to the front.</summary>
-    private void ShowSettings()
+    public void ShowSettings()
     {
         if (_settingsWindow is null)
         {

@@ -54,6 +54,9 @@ public sealed class AppSettings
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public PerfBubbleMode PerfBubble { get; set; } = PerfBubbleMode.Off;
 
+    /// <summary>Pop-up and a green / orange dot when an app starts using the camera or the microphone.</summary>
+    public bool ShowPrivacyIndicator { get; set; } = true;
+
     /// <summary>A short alert under the island when the CPU, memory or GPU is heavily loaded or the battery is low.</summary>
     public bool ShowLoadAlerts { get; set; } = true;
 }

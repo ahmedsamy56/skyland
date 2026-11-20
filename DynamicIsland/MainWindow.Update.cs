@@ -65,13 +65,14 @@ public partial class MainWindow
         bool offer = updates.Status == UpdateStatus.Available;
         bool failed = updates.Status == UpdateStatus.Failed;
 
-        UpdateText.Text = updates.Status switch
+        // Two lines, like the capsules: what it is, and the detail under it.
+        (UpdateTitle.Text, UpdateSub.Text) = updates.Status switch
         {
-            UpdateStatus.Available when updates.Available is { } u => $"Update {UpdateService.Format(u.Version)} ready",
-            UpdateStatus.Downloading => updates.StatusText,
-            UpdateStatus.Installing => "Installing the update...",
-            UpdateStatus.Failed => "Update failed. Try again in Settings.",
-            _ => updates.StatusText
+            UpdateStatus.Available when updates.Available is { } u => ($"Update {UpdateService.Format(u.Version)}", "Ready to install"),
+            UpdateStatus.Downloading => ("Updating SkyLand", updates.StatusText),
+            UpdateStatus.Installing => ("Updating SkyLand", "Installing..."),
+            UpdateStatus.Failed => ("Update failed", "Try again in Settings"),
+            _ => ("SkyLand", updates.StatusText)
         };
 
         UpdateInstallButton.Visibility = offer ? Visibility.Visible : Visibility.Collapsed;

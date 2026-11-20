@@ -47,6 +47,7 @@
   <ItemGroup>
     <!-- GPU load comes from the Windows "GPU Engine" performance counters. -->
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.1" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
   </ItemGroup>
 
   <ItemGroup>

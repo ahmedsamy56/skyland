@@ -17,7 +17,7 @@ namespace DynamicIsland;
 //   alert strip   = a short line under the capsule for heavy PC load / low battery
 public partial class MainWindow : Window
 {
-    private enum IslandState { Idle, Capsule, Card, Notice, Update, Intro }
+    private enum IslandState { Idle, Capsule, Card, Privacy, Notice, Update, Intro }
     private enum Kind { Claude, Focus, Music }
 
     // Sizes. The idle pill shows only the PC stats. Capsules are 44 px high; cards are 340 px wide.
@@ -137,6 +137,7 @@ public partial class MainWindow : Window
         InitAgent();
         InitUpdates();
         InitStats();
+        InitPrivacy();
 
         Loaded += async (_, _) =>
         {
@@ -144,6 +145,7 @@ public partial class MainWindow : Window
             ApplyClockSetting();
             ApplyAgentSetting();
             StartStats();
+            ApplyPrivacySetting();
             _ = StartUpdatesAsync();
             _ = StartIntroAsync();
 
@@ -161,7 +163,11 @@ public partial class MainWindow : Window
     }
 
     // Settings such as the performance bubble change what is on screen.
-    private void OnSettingsChanged() => ApplyState();
+    private void OnSettingsChanged()
+    {
+        ApplyPrivacySetting();
+        ApplyState();
+    }
 
     // ----- Media refresh -------------------------------------------------
 
@@ -220,11 +226,13 @@ public partial class MainWindow : Window
 
     private (double W, double H, double R) SizeOf(IslandState target, Kind? cardKind, bool statsRow) => target switch
     {
-        IslandState.Intro or IslandState.Notice or IslandState.Update => StandardSize,
-        IslandState.Capsule when _main is Kind main => (CapsuleWidth(main, ClaudeCapsuleWidth()), CapsuleHeight, CapsuleRadius),
+        IslandState.Intro or IslandState.Notice => StandardSize,
+        IslandState.Update => (306, CapsuleHeight, CapsuleRadius),
+        IslandState.Privacy => (270, CapsuleHeight, CapsuleRadius),
+        IslandState.Capsule when _main is Kind main => (CapsuleWidth(main, ClaudeCapsuleWidth()) + CollapsedDotExtraWidth(), CapsuleHeight, CapsuleRadius),
         IslandState.Card when cardKind is null => (CardWidth, 150, CardRadius),
         IslandState.Card => (CardWidth, CardContentHeight(cardKind) + (statsRow ? StatsBlock : CardBottomPad), CardRadius),
-        _ => IdleSize
+        _ => (IdleSize.W + CollapsedDotExtraWidth(), IdleSize.H, IdleSize.R)
     };
 
     private void ApplyState()
@@ -255,6 +263,7 @@ public partial class MainWindow : Window
         var target = _intro ? IslandState.Intro
             : _notice ? IslandState.Notice
             : _updatePrompt ? IslandState.Update
+            : _privacyPopup ? IslandState.Privacy
             : wantCard ? IslandState.Card
             : _main is not null ? IslandState.Capsule
             : IslandState.Idle;
@@ -320,7 +329,9 @@ public partial class MainWindow : Window
             FadeView(MusicCardBg, target == IslandState.Card && cardKind == Kind.Music);
             FadeView(FocusPageView, target == IslandState.Card && cardKind == Kind.Focus);
             FadeView(SystemCard, target == IslandState.Card && cardKind is null);
+            FadeView(CardSettingsButton, target == IslandState.Card);
 
+            FadeView(PrivacyView, target == IslandState.Privacy);
             FadeView(NoticeView, target == IslandState.Notice);
             FadeView(UpdateView, target == IslandState.Update);
             FadeView(IntroView, target == IslandState.Intro);
@@ -338,6 +349,8 @@ public partial class MainWindow : Window
             UpdateStatsPace();
         }
 
+        UpdatePrivacyDots();
+        UpdatePrivacyStrip();
         RefreshClaude();
         UpdateProgress();
         UpdateBubbleContent();
@@ -742,6 +755,9 @@ public partial class MainWindow : Window
         _leaveTimer.Stop();
         _leaveTimer.Start();
     }
+
+    // The gear in the corner of every open card: the way to Settings without hunting for the tray icon.
+    private void CardSettings_Click(object sender, RoutedEventArgs e) => ((App)Application.Current).ShowSettings();
 
     private async void PlayPause_Click(object sender, RoutedEventArgs e) => await _media.PlayPauseAsync();
     private async void Next_Click(object sender, RoutedEventArgs e) => await _media.NextAsync();

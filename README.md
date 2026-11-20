@@ -40,6 +40,10 @@
     <td align="center"><img src="docs/images/card-system.png" alt="The System card with four ring gauges"><br><sub>Hover the idle island: ring gauges.</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/images/privacy-popup.png" alt="A pop-up: Microphone in use, Teams, LIVE"><br><sub>An app starts using the microphone.</sub></td>
+    <td align="center"><img src="docs/images/privacy-dot.png" alt="The Claude Code capsule with an orange microphone dot on the right"><br><sub>Then an orange dot stays while it does.</sub></td>
+  </tr>
+  <tr>
     <td align="center"><img src="docs/images/alert.png" alt="An alert under the island: High Memory load"><br><sub>A short alert under the island for heavy load or a low battery.</sub></td>
     <td align="center"><img src="docs/images/perf-rings.png" alt="The optional performance ring bubble on the left"><br><sub>Optional performance rings on the left.</sub></td>
   </tr>
@@ -56,6 +60,7 @@ The island works like the iOS Dynamic Island: **one main thing at a time, plus a
 | **Media** | Title, artist and artwork of whatever is playing (Spotify, browsers, any player in the Windows media flyout), with play, pause, next and previous. |
 | **PC stats** | CPU, memory, GPU and battery when nothing else is on, and along the bottom of the main card. |
 | **Alerts** | A short line under the island when the CPU, memory or GPU stays heavily loaded, or the battery is low. It shows once, then stays quiet for two minutes. |
+| **Camera and microphone** | A short pop-up with the app name when an app starts using your microphone (orange dot) or camera (green dot), then the dot while it does. Nothing is recorded: only which app is capturing is read. The microphone works on every Windows 11 build; the camera needs a build that still records camera use in the registry (newer builds hide it). |
 | **Charging** | A short pop-up when you plug in or unplug the charger. |
 
 The most important thing (Claude, then Focus, then music) is the **main capsule**; the next one is the **bubble** beside it. Hover the capsule to open its card, or hover the bubble to open that card instead, for example the music player while Claude is running. You can also turn on a small **performance ring** bubble on the left (Settings > Island). **Drag the island anywhere** on screen, for example below your browser tabs; it remembers the spot and snaps back to the top centre when you get close.
@@ -73,8 +78,9 @@ It installs for the current user only, so there is **no admin prompt**. SkyLand 
 
 ## Use it
 
+- **Settings gear:** open any card (hover the island) and click the small gear in its top-right corner.
 - **Tray icon:** double-click for Settings; right-click for *Settings*, *Reset position* and *Exit*.
-- **Settings** has switches for the expand trigger (hover or click), pop-up on track change, the performance ring, heavy-load and low-battery alerts, Microsoft Clock sync, Claude Code status, automatic updates, and a *Reset position* button.
+- **Settings** has switches for the expand trigger (hover or click), pop-up on track change, the performance ring, the camera and microphone indicator, heavy-load and low-battery alerts, Microsoft Clock sync, Claude Code status, automatic updates, and a *Reset position* button.
 
 ### Claude Code
 

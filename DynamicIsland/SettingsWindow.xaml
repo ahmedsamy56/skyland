@@ -145,6 +145,22 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Camera and microphone indicator" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="Show a short pop-up when an app starts using your microphone (orange dot) or camera (green dot), then the dot while it does. Nothing is recorded: only which app is capturing is read. The camera is only detected on Windows versions that still record camera use in the registry; newer builds hide it, and then only the microphone shows." Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <ToggleButton x:Name="PrivacyToggle" Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}" Click="PrivacyToggle_Click"
+                                      AutomationProperties.Name="Camera and microphone indicator" />
+                    </Grid>
+
+                    <Border Height="1" Background="#2A2A31" />
+
+                    <Grid Margin="16,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,16,0">
                             <TextBlock Text="Heavy load and low battery alerts" Style="{StaticResource RowTitle}" />
                             <TextBlock Text="Show a short line under the island when the CPU, memory or GPU stays above 85%, or the battery drops below 20%. Each alert shows once, then stays quiet for 2 minutes." Style="{StaticResource RowHint}" />
                         </StackPanel>
