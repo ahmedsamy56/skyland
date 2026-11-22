@@ -39,7 +39,7 @@ public partial class MainWindow
 
     // Clock on the idle island: updated once a second, text changes only on the minute.
     private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private int _lastClockMinute = -1;
+    private int _lastClockKey = -1;
     private string _lastClockDate = "";
 
     private static readonly Brush GaugeBlue = Freeze(new SolidColorBrush(Color.FromRgb(0x60, 0xA5, 0xFA)));
@@ -161,6 +161,7 @@ public partial class MainWindow
     private void UpdateIdleClock()
     {
         var now = DateTime.Now;
+
         string date = now.ToString("ddd, MMM d");
         if (date != _lastClockDate)
         {
@@ -169,9 +170,11 @@ public partial class MainWindow
             IdleClockText.ToolTip = now.ToString("D");
         }
 
-        if (now.Minute == _lastClockMinute && now.Hour == ((_lastClockMinute >> 8) & 0xFF)) return;
+        // hour and minute packed into one key, so the text only changes once a minute
+        int key = (now.Hour << 8) | now.Minute;
+        if (key == _lastClockKey) return;
 
-        _lastClockMinute = now.Minute | (now.Hour << 8);
+        _lastClockKey = key;
         string time = now.ToString("t");
         IdleClockText.Text = time;
         SystemClockText.Text = time;
