@@ -207,6 +207,22 @@
                                       Style="{StaticResource ToggleSwitch}" Click="LoadAlertToggle_Click"
                                       AutomationProperties.Name="Heavy load and low battery alerts" />
                     </Grid>
+
+                    <Border Height="1" Background="#2A2A31" />
+
+                    <Grid Margin="16,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Clock on idle island" Style="{StaticResource RowTitle}" />
+                            <TextBlock Text="Show the current time on the island when nothing else is happening. Hover for today's date." Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <ToggleButton x:Name="IdleClockToggle" Grid.Column="1"
+                                      Style="{StaticResource ToggleSwitch}" Click="IdleClockToggle_Click"
+                                      AutomationProperties.Name="Clock on idle island" />
+                    </Grid>
                 </StackPanel>
             </Border>
 

@@ -33,7 +33,7 @@ The island works like the iOS Dynamic Island: **one main thing at a time, plus a
 
 | State | When | Size (DIPs) |
 |-------|------|-------------|
-| Idle | nothing is on | **232 x 32**: one row of icon + percentage for CPU, memory, GPU and battery |
+| Idle | nothing is on | **232 x 32** (widened to 380 when clock is shown): one row of icon + percentage for CPU, memory, GPU and battery; optionally a clock on the left |
 | Capsule | music, a Focus session or Claude is on | **44 high**, 240-276 wide (Claude 252, 262 for several sessions, 276 when it needs you; Focus 240; music 252): leading mark, label, trailing value |
 | Card | hover the capsule or the bubble (or click, per settings; or a track-change pop-up) | **340 wide**, height by content (Claude 18+28+8+46 per session, music 164, Focus 106, plus 44 for the PC row; System card 150), corner radius 38 |
 | Pop-ups | charging / unplugged, Claude needs you or is done, update prompt, start-up intro | **270 x 60** |
@@ -147,7 +147,7 @@ One capsule pop-up (270 x 44, 3 seconds, no dot afterwards) shared by devices an
 - **Test seams:** `SKYLAND_DEVICE_FAKE=1` reads `%TEMP%\skyland-device-fake.txt` (one event per line: `bt|+|Wireless Headphones|Connected|82%`); `SKYLAND_POWER_FAKE=charging|unplugged` shows the charging pop-up 8 s after start. Real Bluetooth and USB events were not available to test with on the development PC.
 
 ## PC stats
-Shown in three places: the **idle island** (a row of icon + percentage for CPU, memory, GPU and battery), the **bottom row of the main card**, and the **System card** (ring gauges, opens when you hover the idle island). The optional performance bubble and the alert strip use the same readings. Icons are 12x12 vector `Path`s in `MainWindow.xaml` (no icon font); hover an icon for its name.
+Shown in three places: the **idle island** (a row of icon + percentage for CPU, memory, GPU and battery, with an optional clock on the left), the **bottom row of the main card**, and the **System card** (ring gauges, opens when you hover the idle island). The optional performance bubble and the alert strip use the same readings. Icons are 12x12 vector `Path`s in `MainWindow.xaml` (no icon font); hover an icon for its name.
 
 | Item | Source | Notes |
 |------|--------|-------|
@@ -175,6 +175,7 @@ Open it from the tray (double-click, or right-click > Settings...). Changes appl
 | Island | Bluetooth and USB pop-ups | on | Pop-up when a Bluetooth device connects or disconnects, or a USB drive or device is plugged in or removed |
 | Island | Camera and microphone indicator | on | Pop-up, then a green / orange dot while an app uses the camera / microphone |
 | Island | Heavy load and low battery alerts | on | Alert strip under the capsule (5 s, then silent for 2 minutes) |
+| Island | Clock on idle island | on | Shows the time on the idle island and today's date in the System card |
 | Integrations | Sync Microsoft Clock | on | Mirrors Clock's Focus sessions and timers (see above) |
 | Integrations | Claude Code status | on | Shows Claude Code sessions (needs the hooks) |
 | Integrations | Claude Code hooks: Connect / Disconnect | not connected | Adds or removes the island's hooks in `~/.claude/settings.json` |

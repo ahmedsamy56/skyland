@@ -36,6 +36,7 @@ public partial class SettingsWindow : Window
         PerfRingsOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Rings;
         PerfCpuOption.IsChecked = settings.PerfBubble == PerfBubbleMode.Cpu;
         LoadAlertToggle.IsChecked = settings.ShowLoadAlerts;
+        IdleClockToggle.IsChecked = settings.ShowIdleClock;
         PrivacyToggle.IsChecked = settings.ShowPrivacyIndicator;
         DeviceToggle.IsChecked = settings.ShowDeviceEvents;
     }
@@ -73,6 +74,12 @@ public partial class SettingsWindow : Window
     private void LoadAlertToggle_Click(object sender, RoutedEventArgs e)
     {
         SettingsService.Current.ShowLoadAlerts = LoadAlertToggle.IsChecked == true;
+        SettingsService.Save();
+    }
+
+    private void IdleClockToggle_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsService.Current.ShowIdleClock = IdleClockToggle.IsChecked == true;
         SettingsService.Save();
     }
 

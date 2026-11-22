@@ -81,6 +81,9 @@ public sealed class AppSettings
 
     /// <summary>A short alert under the island when the CPU, memory or GPU is heavily loaded or the battery is low.</summary>
     public bool ShowLoadAlerts { get; set; } = true;
+
+    /// <summary>Show a clock (and date on hover) on the idle island instead of only PC stats.</summary>
+    public bool ShowIdleClock { get; set; } = true;
 }
 
 public static class SettingsService

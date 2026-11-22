@@ -37,6 +37,11 @@ public partial class MainWindow
     private (string Title, string Detail)? _alert;
     private bool _alertVisible;
 
+    // Clock on the idle island: updated once a second, text changes only on the minute.
+    private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private int _lastClockMinute = -1;
+    private string _lastClockDate = "";
+
     private static readonly Brush GaugeBlue = Freeze(new SolidColorBrush(Color.FromRgb(0x60, 0xA5, 0xFA)));
     private static readonly Brush GaugeYellow = Freeze(new SolidColorBrush(Color.FromRgb(0xFB, 0xBF, 0x24)));
     private static readonly Brush GaugeGreen = Freeze(new SolidColorBrush(Color.FromRgb(0x34, 0xD3, 0x99)));
@@ -51,6 +56,7 @@ public partial class MainWindow
             _alert = null;
             UpdateAlertStrip();
         };
+        _clockTimer.Tick += (_, _) => UpdateIdleClock();
     }
 
     private void StartStats()
@@ -58,6 +64,11 @@ public partial class MainWindow
         _stats.Baseline();
         _statsTimer.Interval = TimeSpan.FromMilliseconds(600); // first reading soon, then every 2 s (5 s when nobody looks)
         _statsTimer.Start();
+
+        // Show the clock immediately so it does not start blank.
+        UpdateIdleClock();
+        ApplyClockVisibility();
+        _clockTimer.Start();
     }
 
     // Looked at: every 2 s. Otherwise just often enough to catch heavy load and a low battery.
@@ -142,6 +153,42 @@ public partial class MainWindow
 
         if (_state == IslandState.Card && _cardKind is null) ShowGauges(s);
         if (_perfShown) ShowPerf(s);
+    }
+
+    // ----- Idle clock: time on the idle pill, and date/clock in the System card ----------
+
+    /// <summary>Updates the clock text on the idle pill and the date/clock in the System card.</summary>
+    private void UpdateIdleClock()
+    {
+        var now = DateTime.Now;
+        string date = now.ToString("ddd, MMM d");
+        if (date != _lastClockDate)
+        {
+            _lastClockDate = date;
+            SystemDateText.Text = date;
+            IdleClockText.ToolTip = now.ToString("D");
+        }
+
+        if (now.Minute == _lastClockMinute && now.Hour == ((_lastClockMinute >> 8) & 0xFF)) return;
+
+        _lastClockMinute = now.Minute | (now.Hour << 8);
+        string time = now.ToString("t");
+        IdleClockText.Text = time;
+        SystemClockText.Text = time;
+    }
+
+    /// <summary>Shows the clock only while idle and the setting is on; hides it in the stats row of a card.</summary>
+    private void ApplyClockVisibility()
+    {
+        IdleClockText.Visibility =
+            _state == IslandState.Idle && SettingsService.Current.ShowIdleClock
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        SystemDateClockGroup.Visibility =
+            SettingsService.Current.ShowIdleClock
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     // ----- System card: four ring gauges ---------------------------------

@@ -22,7 +22,9 @@ public partial class MainWindow : Window
 
     // Sizes. The idle pill shows only the PC stats. Capsules are 44 px high; cards are 340 px wide.
     // Pop-ups (charging, update prompt, intro) share one standard size so they never jump around.
-    private static readonly (double W, double H, double R) IdleSize = (360, 32, 16);
+    private const double IdleHeight = 32, IdleRadius = 16;
+    private static double IdleWidth => SettingsService.Current.ShowIdleClock ? 380 : 360;
+    private static (double W, double H, double R) IdleSize => (IdleWidth, IdleHeight, IdleRadius);
     private static readonly (double W, double H, double R) StandardSize = (270, 60, 28);
     private const double CapsuleHeight = 44, CapsuleRadius = 22;
     private const double CardWidth = 360, CardRadius = 38;
@@ -87,7 +89,7 @@ public partial class MainWindow : Window
 
     public static readonly DependencyProperty PillRadiusProperty = DependencyProperty.Register(
         nameof(PillRadius), typeof(double), typeof(MainWindow),
-        new PropertyMetadata(IdleSize.R, (d, e) =>
+        new PropertyMetadata(IdleRadius, (d, e) =>
             ((MainWindow)d).Pill.CornerRadius = new CornerRadius((double)e.NewValue)));
 
     public double PillRadius
@@ -178,6 +180,7 @@ public partial class MainWindow : Window
         ApplyPrivacySetting();
         ApplyDeviceSetting();
         ApplyDockSetting();
+        ApplyClockVisibility();
         ApplyState();
     }
 
@@ -361,6 +364,7 @@ public partial class MainWindow : Window
             FadeView(StatsView, target == IslandState.Idle || statsRow, arriveDelay);
             FadeView(StatsDivider, statsRow);
             StatsView.Margin = new Thickness(0, 0, 0, statsRow ? 12 : 8);
+            ApplyClockVisibility();
 
             ShowBubble();
             ShowPerfBubble(perfShown);
